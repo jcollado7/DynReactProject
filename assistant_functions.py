@@ -659,9 +659,12 @@ def order_to_browser(agent_full_name, order_code, steel_grade, thickness, width_
     lc = list_coils.split(',')
     list = []
     df = pd.read_csv('agents.csv', header=0, delimiter=",", engine='python')
+    number = 1
     for z in lc:
-        number = z[-1:]
-        name = 'coil_00' + number
+        name = 'coil_00' + str(number)
+        while not df.loc[df.Name == name, 'Code'].isnull().any().any():
+            number = number + 1
+            name = 'coil_00' + str(number)
         for i in va:
             if i == 'VA_08' or i == 'VA_09':
                 list.append('K')
@@ -672,6 +675,7 @@ def order_to_browser(agent_full_name, order_code, steel_grade, thickness, width_
                 list.append('N')
             loc = choice(list)
         df.loc[df.Name == name, 'location'] = loc
+        df.loc[df.Name == name, 'Code'] = z
     my_dir = os.getcwd()
     df.to_csv(f'{my_dir}''/''agents.csv', index=False, header=True)
 
