@@ -99,7 +99,7 @@ if __name__ == "__main__":
     parser.add_argument('-po', '--price_order', type=float, metavar='', required=False, default='1',
                         help='Price given to the order')
     parser.add_argument('-so', '--string_operations', type=str, metavar='', required=False, default='No',
-                        help='Sequence of operations needed.Write between "x".Format:"BZA|TD[2]|ENT[2|3]|HO[1|2]|NWW[1|4]|VA*[9|10|11]"')
+                        help='Sequence of operations needed.Write between "x".Format:VA_08,VA_09')
     args = parser.parse_args()
     my_dir = os.getcwd()
     my_name = os.path.basename(__file__)[:-3]
