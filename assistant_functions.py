@@ -408,7 +408,9 @@ def agent_jid(agent_directory, agent_full_name):
     agents_df = agents_data()
     agents_df = agents_df.loc[agents_df['Name'] == agent_full_name]
     agents_df = agents_df.reset_index(drop=True)
-    jid_direction = agents_df['User name'].iloc[-1]
+    jid_direction = agents_df.loc[agents_df.Name == agent_full_name, 'User name']
+    jid_direction = jid_direction.values
+    jid_direction = jid_direction[0]
     print(f"{agent_full_name}\n{jid_direction}")
     return jid_direction
 
