@@ -18,7 +18,7 @@ class VA(Agent):
                 pre_auction_start = datetime.datetime.now()
                 auction_df.at[0, 'pre_auction_start'] = pre_auction_start
                 """inform log of status"""
-                va_inform_json = asf.inform_log_df(my_full_name, va_status_started_at, va_status_var).to_json()
+                va_inform_json = asf.inform_log_df(my_full_name, va_status_started_at, va_status_var, va_data_df).to_json()
                 va_msg_log = asf.msg_to_log(va_inform_json, my_dir)
                 await self.send(va_msg_log)
                 """Asks browser for active coils and locations"""
@@ -65,7 +65,7 @@ class VA(Agent):
                         """Create a loop to receive all* the messages"""
                         coil_msgs_df = pd.DataFrame()
                         for i in range(len(jid_list)):  # number of messages that enter auction
-                            coil_msg = await self.receive(timeout=10)
+                            coil_msg = await self.receive(timeout=7)
                             if coil_msg:
                                 coil_jid = str(coil_msg.sender)
                                 msg_sender_jid = coil_jid[:-33]
@@ -203,7 +203,7 @@ class VA(Agent):
                                             va_msg_log_body = asf.auction_kpis(va_data_df, auction_df, process_df, winner_df)
                                             print("Results_1: \n", result)
                                             print("Results_2: \n", results_2)
-                                            va_msg_log = asf.msg_to_log(va_msg_log_body.to_json(), my_dir)
+                                            va_msg_log = asf.msg_to_log_2(va_msg_log_body.to_json(), my_dir)
                                             time_wh = va_msg_log_body.loc[0,'time_wh']
                                             coil_id = va_msg_log_body.loc[0,'id_winner_coil']
                                             print(va_msg_log_body)
@@ -267,7 +267,7 @@ class VA(Agent):
                     va_status_var = 'pre-auction'
             else:
                 """inform log of status"""
-                va_inform_json = asf.inform_log_df(my_full_name, va_status_started_at, va_status_var).to_json()
+                va_inform_json = asf.inform_log_df(my_full_name, va_status_started_at, va_status_var, va_data_df).to_json()
                 va_msg_log = asf.msg_to_log(va_inform_json, my_dir)
                 await self.send(va_msg_log)
                 va_status_var = "stand-by"
@@ -300,8 +300,7 @@ if __name__ == "__main__":
     va_status_var = args.status
     start_auction_before = args.start_auction_before
     """Save to csv who I am"""
-    asf.set_agent_parameters(my_dir, my_name, my_full_name)
-    va_data_df = pd.read_csv(f'{my_full_name}.csv', header=0, delimiter=",", engine='python')
+    va_data_df = asf.set_agent_parameters(my_dir, my_name, my_full_name)
     conf_va_df = va_data_df[['ancho', 'largo', 'espesor']]
     va_data_df['accumulated_profit'] = 0
     va_data_df.at[0,'wh_available'] = "K, L, M, N"
@@ -330,3 +329,4 @@ if __name__ == "__main__":
         va_status_var = "off"
         va_agent.stop()
         quit_spade()
+
