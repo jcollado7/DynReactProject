@@ -21,7 +21,7 @@ class CoilAgent(Agent):
             if coil_status_var == "auction":
                 """inform log of status"""
                 to_do = "search_auction"
-                coil_inform_json = asf.inform_log_df(my_full_name, coil_started_at, coil_status_var, to_do).to_json()
+                coil_inform_json = asf.inform_log_df(my_full_name, coil_started_at, coil_status_var, coil_df, to_do).to_json()
                 coil_msg_log = asf.msg_to_log(coil_inform_json, my_dir)
                 await self.send(coil_msg_log)
                 # it will wait here for va's that are auctionable.
@@ -103,16 +103,13 @@ class CoilAgent(Agent):
                                                         if va_coil_msg3:
                                                             va_coil_msg_df = pd.read_json(va_coil_msg3.body)
                                                             if va_coil_msg3.sender == va_coil_msg_sender:  # checks if communication comes from last sender
-                                                                a = va_coil_msg_df.at[0, 'bid_status']
                                                                 if va_coil_msg_df.at[0, 'bid_status'] == 'acceptedbid':
                                                                     """Store accepted Bid from ca agent"""
                                                                     bid_register_df = bid_register_df.append(va_coil_msg_df)
                                                                     """Confirm or deny assignation"""
                                                                     accepted_jid = asf.compare_va(va_coil_msg_df, bid_register_df)
                                                                     accepted_jid = accepted_jid[:-9]
-                                                                    print(f'accepted jid: {accepted_jid}')
                                                                     va_coil_msg_sender_f = str(va_coil_msg_sender)[:-9]
-                                                                    print(f'va_coil_msg_sender jid: {va_coil_msg_sender_f}')
                                                                     accepted_jid = str(accepted_jid)
                                                                     if accepted_jid == va_coil_msg_sender_f:
                                                                         coil_va_msg = asf.msg_to_sender(va_coil_msg)
@@ -172,7 +169,7 @@ class CoilAgent(Agent):
                                         va_id = va_coil_msg_df.loc[0, 'id']
                                         number_auction += int(1)
                                         number_auction_str = f'{my_full_name} did not enter {va_id} auction because configuration measures was too high. Not_entered auction number: {number_auction}'
-                                        coil_inform_json = asf.inform_log_df(my_full_name, coil_started_at, coil_status_var, to_do,number_auction_str).to_json()
+                                        coil_inform_json = asf.inform_log_df(my_full_name, coil_started_at, coil_status_var, coil_df, to_do,number_auction_str).to_json()
                                         coil_msg_log = asf.msg_to_log(coil_inform_json, my_dir)
                                         await self.send(coil_msg_log)
                                 else:
@@ -224,7 +221,7 @@ class CoilAgent(Agent):
                     await self.send(coil_msg_log)
             elif coil_status_var == "stand-by":  # stand-by status for BR is not very useful, just in case we need the agent to be alive, but not operative. At the moment, it won´t change to stand-by.
                 """inform log of status"""
-                coil_inform_json = asf.inform_log_df(my_full_name, coil_started_at, coil_status_var).to_json()
+                coil_inform_json = asf.inform_log_df(my_full_name, coil_started_at, coil_status_var, coil_df).to_json()
                 coil_msg_log = asf.msg_to_log(coil_inform_json, my_dir)
                 await self.send(coil_msg_log)
                 # now it just changes directly to auction
@@ -232,7 +229,7 @@ class CoilAgent(Agent):
                 coil_status_var = "auction"
             else:
                 """inform log of status"""
-                coil_inform_json = asf.inform_log_df(my_full_name, coil_started_at, coil_status_var).to_json()
+                coil_inform_json = asf.inform_log_df(my_full_name, coil_started_at, coil_status_var, coil_df).to_json()
                 coil_msg_log = asf.msg_to_log(coil_inform_json, my_dir)
                 await self.send(coil_msg_log)
                 coil_status_var = "stand-by"
@@ -242,7 +239,7 @@ class CoilAgent(Agent):
 
         async def on_start(self):
             """inform log of status"""
-            coil_activation_json = asf.activation_df(my_full_name, coil_started_at)
+            coil_activation_json = asf.activation_df(my_full_name, coil_started_at, coil_df)
             coil_msg_log = asf.msg_to_log(coil_activation_json, my_dir)
             await self.send(coil_msg_log)
             self.counter = 1
@@ -271,11 +268,9 @@ if __name__ == "__main__":
     coil_status_var = args.status
     refresh_time = datetime.datetime.now() + datetime.timedelta(seconds=1)
     """Save to csv who I am"""
-    asf.set_agent_parameters(my_dir, my_name, my_full_name)  # Crea un COIL_0XX.csv
-    coil_df = pd.read_csv(f'{my_full_name}.csv', header=0, delimiter=",", engine='python')
+    coil_df = asf.set_agent_parameters(my_dir, my_name, my_full_name)
     coil_df.at[0, 'budget'] = args.budget
     budget = coil_df.loc[0, 'budget']
-    print(f'budget:{budget}')
     bid_register_df = asf.bid_register(my_name, my_full_name)
     number_auction = int(0)
     """XMPP info"""
