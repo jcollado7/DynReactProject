@@ -5,7 +5,6 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from spade.template import Template
 from spade.message import Message
-import sys
 import pandas as pd
 import assistant_functions as asf
 import argparse
@@ -17,7 +16,7 @@ class BrowserAgent(Agent):
         async def run(self):
             global br_status_var, my_full_name, br_started_at, stop_time, my_dir, wait_msg_time, br_coil_name_int_fab, br_int_fab, br_data_df
             """inform log of status"""
-            br_activation_json = asf.activation_df(my_full_name, br_started_at)
+            br_activation_json = asf.activation_df(my_full_name, br_started_at, br_data_df)
             br_msg_log = asf.msg_to_log(br_activation_json, my_dir)
             await self.send(br_msg_log)
             if (br_search != "No")&(datetime.datetime.now() < searching_time):
@@ -25,13 +24,13 @@ class BrowserAgent(Agent):
                 await self.send(br_search_browser)
             if br_status_var == "on":
                 """inform log of status"""
-                br_inform_json = asf.inform_log_df(my_full_name, br_started_at, br_status_var).to_json()
+                br_inform_json = asf.inform_log_df(my_full_name, br_started_at, br_status_var, br_data_df).to_json()
                 br_msg_log = asf.msg_to_log(br_inform_json, my_dir)
                 await self.send(br_msg_log)
                 if br_int_fab == "yes":
                     """Send msg to coil that was interrupted during fab"""
                     int_fab_msg_body = asf.br_int_fab_df(br_data_df).to_json()
-                    coil_jid = asf.get_agent_jid(br_coil_name_int_fab, my_dir)
+                    coil_jid = asf.agent_jid(br_coil_name_int_fab, my_dir)
                     br_coil_msg = asf.br_msg_to(int_fab_msg_body)
                     br_coil_msg.to = coil_jid
                     await self.send(br_coil_msg)
@@ -138,19 +137,19 @@ class BrowserAgent(Agent):
                     await self.send(br_msg_log)
             elif br_status_var == "stand-by":  # stand-by status for BR is not very useful, just in case we need the agent to be alive, but not operative. At the moment, it won      t change to stand-by.
                 """inform log of status"""
-                br_inform_json = asf.inform_log_df(my_full_name, br_started_at, br_status_var).to_json()
+                br_inform_json = asf.inform_log_df(my_full_name, br_started_at, br_status_var, br_data_df).to_json()
                 br_msg_log = asf.msg_to_log(br_inform_json, my_dir)
                 await self.send(br_msg_log)
                 # We could introduce here a condition to be met to change to "on"
                 # now it just changes directly to auction
                 """inform log of status"""
                 br_status_var = "on"
-                br_inform_json = asf.inform_log_df(my_full_name, br_started_at, br_status_var).to_json()
+                br_inform_json = asf.inform_log_df(my_full_name, br_started_at, br_status_var, br_data_df).to_json()
                 br_msg_log = asf.msg_to_log(br_inform_json, my_dir)
                 await self.send(br_msg_log)
             else:
                 """inform log of status"""
-                br_inform_json = asf.inform_log_df(my_full_name, br_started_at, br_status_var).to_json()
+                br_inform_json = asf.inform_log_df(my_full_name, br_started_at, br_status_var, br_data_df).to_json()
                 br_msg_log = asf.msg_to_log(br_inform_json, my_dir)
                 await self.send(br_msg_log)
                 br_status_var = "stand-by"
@@ -195,8 +194,7 @@ if __name__ == "__main__":
     br_coil_name_int_fab = asf.my_full_name(coil_agent_name, coil_agent_number)
     searching_time = datetime.datetime.now() + datetime.timedelta(seconds=args.search_time)
     """Save to csv who I am"""
-    asf.set_agent_parameters(my_dir, my_name, my_full_name)
-    br_data_df = pd.read_csv(f'{my_full_name}.csv', header=0, delimiter=",", engine='python')
+    br_data_df = asf.set_agent_parameters(my_dir, my_name, my_full_name)
     #opf.br_create_register(my_dir, my_full_name)  # register to store entrance and exit
     """XMPP info"""
     br_jid = asf.agent_jid(my_dir, my_full_name)
