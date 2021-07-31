@@ -10,6 +10,7 @@ from spade.behaviour import OneShotBehaviour
 from spade.template import Template
 
 
+
 class LaunchAgent(Agent):
     class LABehav(OneShotBehaviour):
         async def run(self):
@@ -20,11 +21,11 @@ class LaunchAgent(Agent):
             await self.send(la_msg_log)'''
             """Send new order to log"""
             if order_code != "No":
-                print("RegisterBehav running")
                 la_inform_log_json = asf.order_file(my_full_name, order_code, steel_grade, thickness, width_coils,
                                                     num_coils, list_coils, each_coil_price, list_ware, string_operations)
                 la_order_log = asf.order_to_log(la_inform_log_json, my_dir)
                 await self.send(la_order_log)
+
             """Send searching code to browser"""
             if la_search != "No":
                 la_search_browser = asf.order_to_search(la_search, my_full_name, my_dir)
@@ -33,17 +34,14 @@ class LaunchAgent(Agent):
     class ReceiverBehav(OneShotBehaviour):
         async def run(self):
             await self.agent.b.join()
-            print("InformBehav running")
             """Receive message"""
-            msg = await self.receive(timeout=wait_msg_time)  # wait for a message for 5 seconds
+            msg = await self.receive(timeout=2)  # wait for a message for 5 seconds
             if msg:
                 single = msg.body.split(":")
                 if single[0] == "Alive":
                     msg_aa_response = f'ActiveAgent: agent_name:{my_full_name}, active_time:{la_started_at}'
                     response_active = asf.msg_to_log(msg_aa_response, my_dir)
                     await self.send(response_active)
-            else:
-                print("msg not received. Search failed")
 
         async def on_end(self):
             await self.agent.stop()
@@ -75,7 +73,6 @@ if __name__ == "__main__":
                         help='status_var: on, stand-by, Off')
     parser.add_argument('--search', type=str, metavar='', required=False, default='No',
                         help='Search order by code. Writte depending on your case: oc (order_code),sg(steel_grade),at(average_thickness), wi(width_coils), ic(id_coil), so(string_operations), date.Example: --search oc = 987')
-    # DATOS DE PEDIDO:
     parser.add_argument('-oc', '--order_code', type=str, metavar='', required=False, default='No',
                         help='Specify the number code of the order. Write between "x"')
     parser.add_argument('-sg', '--steel_grade', type=str, metavar='', required=False, default='1',
@@ -112,8 +109,7 @@ if __name__ == "__main__":
     list_ware = args.list_position
     string_operations = args.string_operations
     """Save to csv who I am"""
-    asf.set_agent_parameters(my_dir, my_name, my_full_name)
-    la_data_df = pd.read_csv(f'{my_full_name}.csv', header=0, delimiter=",", engine='python')
+    la_data_df = asf.set_agent_parameters(my_dir, my_name, my_full_name)
     """XMPP info"""
     la_jid = asf.agent_jid(my_dir, my_full_name)
     la_passwd = asf.agent_passwd(my_dir, my_full_name)
@@ -129,4 +125,5 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             la_status_var = "off"
             la_agent.stop()
-            quit_spade()
+    quit_spade()
+
