@@ -1,12 +1,10 @@
 from spade import quit_spade
 import time
 import datetime
-from datetime import date
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from spade.template import Template
 from spade.message import Message
-import sys
 import pandas as pd
 import logging
 import argparse
@@ -20,32 +18,7 @@ class LogAgent(Agent):
     class LogBehav(CyclicBehaviour):
         async def run(self):
             global wait_msg_time, logger, log_status_var
-            active_agents = pd.DataFrame()
-            if log_status_var =="on":
-                "Active Agents"
-                r= asf.checkFileExistance()
-                if r == True:
-                    agent_id = []
-                    agent_name = []
-                    agent_type = []
-                    activation_time = []
-                    a = pd.read_csv('ActiveAgents.csv', header=0, delimiter=",", engine='python')
-                    if len(a) != 0:
-                        for line in a.index:
-                            agent_jid = a.loc[line, 'agent_id']
-                            alive_agent_msg = asf.alive_agent(agent_jid)
-                            await self.send(alive_agent_msg)
-                            msg2 = await self.receive(timeout=wait_msg_time)  # wait for a message for 3 seconds
-                            if msg2:
-                                logger.info(msg2.body)
-                                msg2_sender_jid0 = str(msg2.sender)
-                                msg2_sender_jid2 = msg2_sender_jid0[:-9]
-                                m = msg2.body.split(':')
-                                typeaa = asf.aa_type(msg2_sender_jid2)
-                                nueva_fila = {'agent_id': msg2_sender_jid2, 'agent_name': m[2] , 'agent_type': typeaa, 'activation_time': m[4] }
-                                active_agents = active_agents.append(nueva_fila, ignore_index = True)
-                        remove('ActiveAgents.csv')
-                        del a
+            if log_status_var == "on":
                 msg = await self.receive(timeout=wait_msg_time)  # wait for a message for 20 seconds
                 if msg:
                     print(f"received msg number {self.counter}")
@@ -53,16 +26,8 @@ class LogAgent(Agent):
                     logger.info(msg.body)
                     msg_sender_jid0 = str(msg.sender)
                     msg_sender_jid = msg_sender_jid0[:-31]
-                    msg_sender_jid2 = msg_sender_jid0[:-9]
-                    #opf.active_agents(msg_sender_jid2)
-                    agent_type = asf.aa_type(msg_sender_jid2)
-                    nueva_fila2 = {'agent_id': msg_sender_jid2, 'agent_name': msg_sender_jid, 'agent_type': agent_type, 'activation_time': datetime.datetime.now() }
-                    active_agents = active_agents.append(nueva_fila2, ignore_index = True)
-                    active_agents = active_agents.drop_duplicates(keep='first')
-                    n = f'ActiveAgent: agent_id: agent_id:{msg_sender_jid2}, agent_name:{msg_sender_jid}, type:{agent_type}, active_time:{datetime.datetime.now()}'
-                    logger.info(n)
                     x = re.search("won auction to process", msg.body)
-                    if x:                                     #update  coil status
+                    if x:
                         auction = msg.body.split(" ")
                         coil_id = auction[0]
                         status = auction[13]
@@ -74,6 +39,11 @@ class LogAgent(Agent):
                     elif msg_sender_jid == "dynrct_r00":
                         launcher_df = pd.read_json(msg.body)
                         asf.change_warehouse(launcher_df, my_dir)
+                        coils = launcher_df.loc[0,'list_coils']
+                        locations = launcher_df.loc[0, 'list_ware']
+                        code = launcher_df.loc[0, 'order_code']
+                        n = f' Order Code: {code} with code coils: [{coils}] registered in locations [{locations}].'
+                        logger.info(n)
                     elif msg_sender_jid == "browser":
                         x = re.search("{", msg.body)
                         if x:
@@ -95,7 +65,6 @@ class LogAgent(Agent):
                 logger.debug(f"Log agent status: {log_status_var}")
 
         async def on_end(self):
-            active_agents.to_csv('ActiveAgents.csv', header = True, index = False)
             await self.agent.stop()
 
         async def on_start(self):
@@ -161,4 +130,3 @@ if __name__ == "__main__":
         log_status_var = "off"
         logger.critical(f"{my_full_name}_agent stopped, coil_status_var: {log_status_var}")
         quit_spade()
-        # while 1:
