@@ -8,7 +8,7 @@ import datetime
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
 from spade.template import Template
-
+import json
 
 
 class LaunchAgent(Agent):
@@ -44,10 +44,20 @@ class LaunchAgent(Agent):
                     await self.send(response_active)
 
         async def on_end(self):
+            """Inform log """
+            '''la_msg_end = f'{my_full_name} agent ended'
+            la_msg_end = json.dumps(la_msg_end)
+            la_msg_end = asf.msg_to_log(la_msg_end, my_dir)
+            await self.send(la_msg_end)'''
             await self.agent.stop()
 
         async def on_start(self):
             self.counter = 1
+            """Inform log """
+            '''la_msg_start = f'{my_full_name} agent started'
+            la_msg_start = json.dumps(la_msg_start)
+            la_msg_start = asf.msg_to_log(la_msg_start, my_dir)
+            await self.send(la_msg_start)'''
 
     async def setup(self):
         self.b = self.LABehav()
@@ -96,7 +106,7 @@ if __name__ == "__main__":
     my_name = os.path.basename(__file__)[:-3]
     my_full_name = asf.my_full_name(my_name, args.agent_number)
     wait_msg_time = args.wait_msg_time
-    la_started_at = datetime.datetime.now().time()
+    la_started_at = datetime.datetime.now()
     la_status_var = args.status
     la_search = args.search
     order_code = args.order_code
@@ -126,4 +136,3 @@ if __name__ == "__main__":
             la_status_var = "off"
             la_agent.stop()
     quit_spade()
-
