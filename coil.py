@@ -266,6 +266,9 @@ class CoilAgent(Agent):
             coil_msg_start = json.dumps(coil_msg_start)
             va_msg_log = asf.msg_to_log(coil_msg_start, my_dir)
             await self.send(va_msg_log)
+            coil_activation_json = asf.activation_df(my_full_name, coil_started_at, coil_df)
+            coil_msg_log = asf.msg_to_log(coil_activation_json, my_dir)
+            await self.send(coil_msg_log)
             self.counter = 1
 
     async def setup(self):
@@ -311,3 +314,4 @@ if __name__ == "__main__":
         coil_status_var = "off"
         coil_agent.stop()
         quit_spade()
+
