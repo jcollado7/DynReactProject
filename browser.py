@@ -45,7 +45,6 @@ class BrowserAgent(Agent):
                                 """Checks for active users and their actual locations and reply"""
                                 va_name = va_data_df.loc[0, 'agent_type']
                                 br_msg_va_body = asf.check_active_users_loc_times(va_name)
-                                print(br_msg_va_body)
                                 br_msg_va.body = br_msg_va_body
                                 await self.send(br_msg_va)
                                 """Inform log of performed request"""
