@@ -18,7 +18,7 @@ def agents_data():
 
 def auction_blank_df():
     """Returns df column structure with all necessary information to evaluate auction performance"""
-    df = pd.DataFrame([], columns=['active_coils', 'auction_coils', 'fab_start', 'coil_ratings',
+    df = pd.DataFrame([], columns=['agent_type', 'active_coils', 'auction_coils', 'fab_start', 'coil_ratings',
                                    'pre_auction_duration', 'auction_duration'])
 
     '''df = pd.DataFrame([], columns=['id', 'agent_type', 'location_1', 'location_2', 'location',
@@ -894,3 +894,4 @@ def msg_to_launcher(msg, agent_directory):
     msg_la.body = msg
     msg_la.set_metadata("performative", "inform")
     return msg_la
+
