@@ -18,19 +18,26 @@ def agents_data():
 
 def auction_blank_df():
     """Returns df column structure with all necessary information to evaluate auction performance"""
-    df = pd.DataFrame([], columns=['id', 'agent_type', 'location_1', 'location_2', 'location',
+    df = pd.DataFrame([], columns=['active_coils', 'auction_coils', 'fab_start', 'coil_ratings',
+                                   'pre_auction_duration', 'auction_duration'])
+
+    '''df = pd.DataFrame([], columns=['id', 'agent_type', 'location_1', 'location_2', 'location',
                                    'coil_auction_winner', 'coil_length', 'coil_width', 'coil_thickness', 'coil_weight',
                                    'int_fab', 'bid', 'budget', 'ship_date', 'ship_date_rating',
                                    'setup_speed',
-                                   'bid_rating', 'int_fab_priority', 'int_fab_rating', 'rating', 'rating_dif', 'negotiation',
+                                   'bid_rating', 'int_fab_priority', 'int_fab_rating', 'rating', 'rating_dif',
+                                   'negotiation',
                                    'pre_auction_start', 'auction_start', 'auction_finish',
-                                   'active_tr_slot_1', 'active_tr_slot_2', 'tr_booking_confirmation_at', 'active_wh', 'wh_booking_confirmation_at', 'wh_location', 'active_coils', 'auction_coils',
-                                   'brAVG(tr_op_time)', 'brAVG(va_op_time)', 'AVG(tr_op_time)', 'AVG(va_op_time)', 'fab_start'
-                                   'slot_1_start', 'slot_1_end', 'slot_2_start', 'slot_2_end', 'delivered_to_wh', 'handling_cost_slot_1', 'handling_cost_slot_2',
+                                   'active_tr_slot_1', 'active_tr_slot_2', 'tr_booking_confirmation_at', 'active_wh',
+                                   'wh_booking_confirmation_at', 'wh_location', 'active_coils', 'auction_coils',
+                                   'brAVG(tr_op_time)', 'brAVG(va_op_time)', 'AVG(tr_op_time)', 'AVG(va_op_time)',
+                                   'fab_start'
+                                   'slot_1_start', 'slot_1_end', 'slot_2_start', 'slot_2_end', 'delivered_to_wh',
+                                   'handling_cost_slot_1', 'handling_cost_slot_2',
                                    'coil_ratings_1', 'coil_ratings_2',
                                    'pre_auction_duration', 'auction_duration',
                                    'gantt', 'location_diagram'
-                                   ])
+                                   ])'''
     return df
 
 
@@ -192,25 +199,29 @@ def auction_kpis(va_data_df, auction_df, process_df, winner_df):
     df = auction_blank_df()
     #va
     df.at[0, 'id_va'] = va_data_df.loc[0, 'id']
-    df.at[0, 'agent_type'] = va_data_df.loc[0, 'agent_type']
-    df.at[0, 'accumulated_profit'] = va_data_df.loc[0, 'accumulated_profit']
+    df.at[0, 'accumulated_profit_va'] = va_data_df.loc[0, 'accumulated_profit']
     #coil_winner
-    df.at[0, 'profit_va'] = winner_df.loc[0, 'profit']
+    df.at[0, 'profit_va_auction'] = winner_df.loc[0, 'profit']
     df.at[0, 'id_winner_coil'] = winner_df.loc[0, 'id']
-    df.at[0, 'coil_location'] = winner_df.loc[0, 'location']
+    df.at[0, 'coil_location_winner'] = winner_df.loc[0, 'location']
+    df.at[0, 'minimum_price'] = winner_df.loc[0, 'minimum_price']
     df.at[0, 'bid_winner_coil'] = winner_df.loc[0, 'bid']
     df.at[0, 'counterbid_winner_coil'] = winner_df.loc[0, 'counterbid']
-    df.at[0, 'budget_remaining'] = winner_df.loc[0, 'budget_remaining']
-    df.at[0, 'ship_date'] = winner_df.loc[0, 'ship_date']
-    df.at[0, 'coil_ancho'] = winner_df.loc[0, 'ancho']
-    df.at[0, 'coil_largo'] = winner_df.loc[0, 'largo']
-    df.at[0, 'coil_espesor'] = winner_df.loc[0, 'espesor']
-    df.at[0, 'minimum_price'] = winner_df.loc[0, 'minimum_price']
+    df.at[0, 'budget_remaining_winner'] = winner_df.loc[0, 'budget_remaining']
+    df.at[0, 'ship_date_winner'] = winner_df.loc[0, 'ship_date']
+    df.at[0, 'coil_ancho_winner'] = winner_df.loc[0, 'ancho']
+    df.at[0, 'coil_largo_winner'] = winner_df.loc[0, 'largo']
+    df.at[0, 'coil_espesor_winner'] = winner_df.loc[0, 'espesor']
 
     df.at[0, 'pre_auction_start'] = auction_df.loc[0, 'pre_auction_start']
-    df.at[0, 'auction_start'] = auction_df.loc[0, 'auction_start']
     df.at[0, 'pre_auction_duration'] = auction_df.loc[0, 'auction_start'] - auction_df.loc[0, 'pre_auction_start']
+    df.at[0, 'auction_start'] = auction_df.loc[0, 'auction_start']
     df.at[0, 'auction_finish'] = datetime.datetime.now()
+    df.at[0, 'auction_duration'] = df.loc[0, 'auction_finish'] - auction_df.loc[0, 'auction_start']
+    df.at[0, 'fab_start'] = process_df['fab_start'].iloc[-1]
+    df.at[0, 'fab_end'] = process_df['fab_end'].iloc[-1]
+    df.at[0, 'time_wh'] = df.loc[0, 'fab_end'] + datetime.timedelta(seconds=30)
+
     df.at[0, 'active_coils'] = auction_df.loc[0, 'active_coils']
     df.at[0, 'auction_coils'] = auction_df.loc[0, 'auction_coils']
     df.at[0, 'active_coils'] = auction_df.loc[0, 'active_coils']
@@ -218,16 +229,11 @@ def auction_kpis(va_data_df, auction_df, process_df, winner_df):
     df.at[0, 'number_auction'] = auction_df.loc[0, 'number_auction']
     df.at[0, 'number_auction_completed'] = auction_df.loc[0, 'number_auction_completed']
 
-    df.at[0, 'fab_start'] = process_df['fab_start'].iloc[-1]
-    df.at[0, 'fab_end'] = process_df['fab_end'].iloc[-1]
-    df.at[0, 'time_wh'] = df.loc[0, 'fab_end'] + datetime.timedelta(seconds=30)
-    df.at[0, 'coil_ratings_1'] = auction_df.loc[0, 'coil_ratings_1']
-    df.at[0, 'coil_ratings_2'] = auction_df.loc[0, 'coil_ratings_2']
+    #df.at[0, 'coil_ratings_1'] = auction_df.loc[0, 'coil_ratings_1']
+    df.at[0, 'coil_ratings'] = auction_df.loc[0, 'coil_ratings']
 
-    df.at[0, 'auction_duration'] = df.loc[0, 'auction_finish'] - auction_df.loc[0, 'auction_start']
-
-    gantt_df = gantt(df)
-    df.at[0, 'gantt'] = gantt_df.to_dict()
+    #gantt_df = gantt(df)
+    #df.at[0, 'gantt'] = gantt_df.to_dict()
     '''location_diagram_df = location_diagram(df)
     df.at[0, 'location_diagram'] = location_diagram_df.to_dict()'''
     return df
@@ -384,18 +390,18 @@ def my_full_name(agent_name, agent_number):
     return full_name
 
 def set_agent_parameters(agent_directory, agent_name, agent_full_name):
-    agent_data = pd.DataFrame([], columns=['id', 'agent_type','location', 'purpose', 'request_type', 'time', 'activation_time', 'int_fab'])
+    agent_data = pd.DataFrame([], columns=['id', 'agent_type','location', 'purpose', 'request_type', 'time', 'activation time', 'int_fab'])
     agent_data.at[0, 'id'] = agent_full_name
     agent_data.at[0, 'agent_type'] = agent_name
     agents_df = agents_data()
     agents_df = agents_df.loc[agents_df['Name'] == agent_full_name]
     agents_df = agents_df.reset_index(drop=True)
     if agent_name == 'va':
-        agent_data = agent_data.reindex(columns=['id', 'agent_type', 'purpose', 'request_type', 'time', 'activation_time', 'setup_speed', 'ancho', 'largo', 'espesor']) #Los valores ya existentes, se mantienen
+        agent_data = agent_data.reindex(columns=['id', 'agent_type', 'purpose', 'request_type', 'time', 'activation time', 'setup_speed', 'ancho', 'largo', 'espesor']) #Los valores ya existentes, se mantienen
         agent_data = va_parameters(agent_data, agents_df, agent_name)
     elif agent_name == "coil":
         agent_data = agent_data.reindex(
-            columns=['id', 'agent_type', 'location', 'From', 'Code', 'purpose', 'request_type', 'time', 'activation_time', 'to_do', 'number_auction', 'int_fab', 'bid', 'bid_status', 'ancho', 'largo', 'espesor', 'budget'])
+            columns=['id', 'agent_type', 'location', 'From', 'Code', 'purpose', 'request_type', 'time', 'activation time', 'to_do', 'number_auction', 'int_fab', 'bid', 'bid_status', 'ancho', 'largo', 'espesor', 'budget'])
         agent_data = coil_parameters(agent_data, agents_df, agent_name)
     else: #log,browser..
         agents_df = agents_data()
@@ -485,7 +491,7 @@ def msg_to_log_2(msg_body, agent_directory):
     return msg_log
 
 def activation_df(agent_full_name, status_started_at, df, *args):
-    act_df = df.loc[:, 'id':'activation_time']
+    act_df = df.loc[:, 'id':'activation time']
     act_df = act_df.astype(str)
     act_df.at[0, 'purpose'] = "inform"
     act_df.at[0, 'request_type'] = ""
@@ -495,13 +501,15 @@ def activation_df(agent_full_name, status_started_at, df, *args):
     if args:
         df = args[0]
         act_df = act_df.join(df)
-    act_json = act_df.to_json()
+    act_json = act_df.to_json(orient="records")
     return act_json
 
 def inform_log_df(agent_full_name, status_started_at, status, df, *args, **kwargs):
     """Inform of agent status"""
-    inf_df = df.loc[:, 'id':'activation_time']
+    inf_df = df.loc[:, 'id':'activation time']
     inf_df = inf_df.astype(str)
+    inf_df.at[0, 'id'] = inf_df.at[0, 'id']
+    inf_df.at[0, 'agent_type'] = inf_df.at[0, 'agent_type']
     inf_df.at[0, 'purpose'] = "inform"
     inf_df.at[0, 'request_type'] = ""
     inf_df.at[0, 'time'] = datetime.datetime.now()
@@ -597,7 +605,7 @@ def check_active_users_loc_times(va_data_df, agent_name, *args):
         coil_df = coil_df.append(row_df)
     coil_df = coil_df.sort_index()
     coil_df = coil_df.reset_index(drop=True)
-    coil_df = coil_df.to_json()
+    coil_df = coil_df.to_json(orient="records")
     return coil_df
 
 def br_get_requested_df(agent_name, *args):
@@ -606,7 +614,7 @@ def br_get_requested_df(agent_name, *args):
     if args == "coils":
         search_str = '{"id":{"0":"' + "coil" + '_'  # tiene que encontrar todas las coil que quieran fabricarse y como mucho los últimos 1000 registros.
     else:
-        search_str = "activation_time"  # takes every record with this. Each agent is sending that info while alive communicating to log.
+        search_str = "activation time"  # takes every record with this. Each agent is sending that info while alive communicating to log.
     l = []
     N = 1000
     with open(r"log.log") as f:
@@ -619,12 +627,16 @@ def br_get_requested_df(agent_name, *args):
     for ind in df_0.index:
         if ind == 0:
             element = df_0.loc[ind, 'register']
-            z = json.loads(element)
-            df = pd.DataFrame.from_dict(z)
+            for x in range(len(element)):
+                element = element.replace("]", "")
+            y = json.loads(element)
+            df = pd.DataFrame(y, index=[0])
         else:
             element = df_0.loc[ind, 'register']
+            for x in range(len(element)):
+                element = element.replace("]", "")
             y = json.loads(element)
-            b = pd.DataFrame.from_dict(y)
+            b = pd.DataFrame(y, index=[0])
             df = df.append(b)
     df = df.reset_index(drop=True)
     if args == "coils":  # if ca is requesting
@@ -722,7 +734,7 @@ def order_code_log(coil_code):
     order_coil_df = pd.DataFrame([], columns = ['Code'])
     order_coil_df.at[0, 'Code'] = coil_code
     order_coil_df.loc[0, 'purpose'] = "location_coil"
-    return order_coil_df.to_json()
+    return order_coil_df.to_json(orient="records")
 
 def loc_of_coil(coil_df):
     loc_df = pd.DataFrame([], columns = ['location'])
