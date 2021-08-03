@@ -26,10 +26,15 @@ class VA(Agent):
                 """Asks browser for active coils and locations"""
                 #  Builds msg to br
                 va_request_type = "coils"
-                va_msg_br_body = asf.req_active_users_loc_times(va_data_df, va_request_type) #returns a json with request info to browser
-                va_msg_br = asf.msg_to_br(va_msg_br_body, my_dir)
+                va_msg_br_body = asf.req_active_users_loc_times(va_data_df, va_request_type)
+                va_msg_br_body_json = va_msg_br_body.to_json() #returns a json with request info to browser
+                va_msg_br = asf.msg_to_br(va_msg_br_body_json, my_dir)
                 # returns a msg object with request info to browser and message setup
                 await self.send(va_msg_br)
+                """Inform log """
+                va_req_br = asf.request_browser(va_msg_br_body).to_json(orient="records")
+                va_req_br = asf.msg_to_log(va_req_br, my_dir)
+                await self.send(va_req_br)
                 br_msg = await self.receive(timeout=20)
                 if br_msg:
                     br_data_df = pd.read_json(br_msg.body)
@@ -51,8 +56,8 @@ class VA(Agent):
                         auction_df.at[0, 'number_preauction'] = auction_df.at[0, 'number_preauction'] + 1
                         number = int(auction_df.at[0, 'number_preauction'])
                         """Inform log """
-                        va_msg_log_body = f'{my_full_name} pre-auction number {number}. Coil enter in the pre-auction {jid_list}.'
-                        va_msg_log_body = json.dumps(va_msg_log_body)
+                        va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'], jid_list)
+                        va_msg_log_body = va_msg_log_body.to_json(orient="records")
                         va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                         await self.send(va_msg_log)
                         va_msg_to_coils = asf.va_msg_to(va_to_coils_json)
@@ -77,27 +82,19 @@ class VA(Agent):
                                     msg_sender = coil_jid[:-9]
                                     coil_msg_df.at[0, 'coil_jid'] = msg_sender
                                     coil_msgs_df = coil_msgs_df.append(coil_msg_df)  # received msgs
-                                    print('received msgs from coils')
-                                    """Inform log """
-                                    va_msg_log_body = f'{my_full_name} receives a bid from {coil_jid}.'
-                                    va_msg_log_body = json.dumps(va_msg_log_body)
-                                    va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
-                                    await self.send(va_msg_log)
                                     va_status_var = "auction"
                                 else:
                                     """inform log of issue"""
                                     va_msg_log_body = f'{my_full_name} received a msg from {msg_sender_jid} rather than coil'
-                                    va_msg_log_body = json.dumps(va_msg_log_body)
+                                    va_msg_log_body = asf.inform_error(va_msg_log_body)
                                     va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                     await self.send(va_msg_log)
-                                    print(va_msg_log_body)
                             else:
                                 """Inform log """
                                 va_msg_log_body = f'{my_full_name} did not receive answer from coil'
-                                va_msg_log_body = json.dumps(va_msg_log_body)
+                                va_msg_log_body = asf.inform_error(va_msg_log_body)
                                 va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                 await self.send(va_msg_log)
-                                print(va_msg_log_body)
             if va_status_var == "auction":
                 if not coil_msgs_df.empty:
                     auction_start = datetime.datetime.now()
@@ -105,24 +102,18 @@ class VA(Agent):
                     auction_df.at[0, 'number_auction'] = auction_df.at[0, 'number_auction'] + 1
                     number = int(auction_df.at[0, 'number_auction'])
                     bid_list = coil_msgs_df['id'].tolist()
+                    va_data_df.at[0, 'auction_level'] = 2
                     """Inform log """
-                    va_msg_log_body = f'{my_full_name} auction number {number}. Coil enter in the auction {bid_list}.'
-                    va_msg_log_body = json.dumps(va_msg_log_body)
+                    va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'], bid_list)
+                    va_msg_log_body = va_msg_log_body.to_json(orient="records")
                     va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                     await self.send(va_msg_log)
                     coil_msgs_df = coil_msgs_df.reset_index(drop=True)
-                    va_data_df.at[0, 'auction_level'] = 2
                     auction_df.at[0, 'auction_coils'] = [coil_msgs_df['id'].to_list()]  # Send info to log
                     bid_coil = asf.bid_evaluation(coil_msgs_df, va_data_df)
-                    #auction_df.at[0, 'coil_ratings_1'] = [bid_coil.to_dict(orient="records")]
                     bid_coil['bid_status'] = 'extrabid'
                     jid_list = bid_coil['coil_jid'].tolist()
-                    result = asf.result(bid_coil, jid_list) #Graphic Result
-                    """Inform log """
-                    va_msg_log_body = f'{my_full_name} evaluates bids and asks for counter-bid from {jid_list}.'
-                    va_msg_log_body = json.dumps(va_msg_log_body)
-                    va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
-                    await self.send(va_msg_log)
+                    result = asf.result(bid_coil, jid_list)
                     for i in jid_list:
                         """Ask for extra bid"""
                         va_data_df.at[0, 'bid_status'] = 'extrabid'
@@ -140,26 +131,19 @@ class VA(Agent):
                                 coil_msg_df = pd.read_json(coil_msg.body)
                                 coil_jid = str(coil_msg.sender)
                                 coil_msg_df.at[0, 'coil_jid'] = coil_jid
-                                coil_msgs_df_2 = coil_msgs_df_2.append(coil_msg_df)  # received msgs
-                                """Inform log """
-                                va_msg_log_body = f'{my_full_name} received a counter-bid from {coil_jid}.'
-                                va_msg_log_body = json.dumps(va_msg_log_body)
-                                va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
-                                await self.send(va_msg_log)
+                                coil_msgs_df_2 = coil_msgs_df_2.append(coil_msg_df)
                             else:
                                 """inform log of issue"""
                                 va_msg_log_body = f'{my_full_name} received a msg from {msg_sender_jid} rather than coil'
-                                va_msg_log_body = json.dumps(va_msg_log_body)
+                                va_msg_log_body = asf.inform_error(va_msg_log_body)
                                 va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                 await self.send(va_msg_log)
-                                print(va_msg_log_body)
                         else:
                             """Inform log """
                             va_msg_log_body = f'{my_full_name} did not receive answer from any coil'
-                            va_msg_log_body = json.dumps(va_msg_log_body)
+                            va_msg_log_body = asf.inform_error(va_msg_log_body)
                             va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                             await self.send(va_msg_log)
-                            print(va_msg_log_body)
                     if not coil_msgs_df_2.empty:
                         coil_msgs_df_2 = coil_msgs_df_2.reset_index(drop=True)
                         """Evaluate extra bids and give a rating"""
@@ -167,12 +151,7 @@ class VA(Agent):
                         counterbid_coil = asf.counterbid_evaluation(coil_msgs_df_2, va_data_df)
                         """Inform coil of assignation and agree on assignation"""
                         jid_list = counterbid_coil['coil_jid'].tolist()
-                        results_2 = asf.results_2(counterbid_coil, jid_list)  #Graphic Results
-                        """Inform log """
-                        va_msg_log_body = f'{my_full_name} evaluates counter-bids.'
-                        va_msg_log_body = json.dumps(va_msg_log_body)
-                        va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
-                        await self.send(va_msg_log)
+                        results_2 = asf.results_2(counterbid_coil, jid_list)
                         for i in range(len(jid_list)):
                             coil_jid_winner_f = counterbid_coil.loc[i, 'coil_jid']
                             coil_jid_winner = coil_jid_winner_f[:-9]
@@ -190,8 +169,10 @@ class VA(Agent):
                                 va_coil_winner_msg.to = coil_jid_winner
                                 await self.send(va_coil_winner_msg)
                                 """Inform log """
-                                va_msg_log_body = f'{my_full_name} accept counterbid from {coil_jid_winner}.'
-                                va_msg_log_body = json.dumps(va_msg_log_body)
+                                va_data_df.at[0, 'auction_level'] = 3
+                                va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'],
+                                                              coil_jid_winner)
+                                va_msg_log_body = va_msg_log_body.to_json(orient="records")
                                 va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                 await self.send(va_msg_log)
                                 coil_msg = await self.receive(timeout=20)
@@ -223,60 +204,53 @@ class VA(Agent):
                                             va_status_var = "stand_by"
                                             """Inform log """
                                             va_msg_log_body = f' {coil_id } will be at {time_wh} in wh Terminado.'
-                                            va_msg_log_body = json.dumps(va_msg_log_body)
+                                            va_msg_log_body = asf.inform_error(va_msg_log_body)
                                             va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                             await self.send(va_msg_log)
                                             """Inform log """
-                                            va_msg_log_body = f'Auction number {number} of {my_full_name} has finished.{my_full_name} changes status to {va_status_var}.'
-                                            va_msg_log_body = json.dumps(va_msg_log_body)
+                                            va_msg_log_body = asf.finish_va_auction(my_full_name,number)
                                             va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                             await self.send(va_msg_log)
                                             break
                                         else:
                                             """Inform log """
                                             va_msg_log_body = f'{my_full_name} did not receive answer from finalist coil'
-                                            va_msg_log_body = json.dumps(va_msg_log_body)
+                                            va_msg_log_body = asf.inform_error(va_msg_log_body)
                                             va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                             await self.send(va_msg_log)
-                                            print(va_msg_log_body)
 
                                     else:
                                         """inform log of issue"""
                                         va_msg_log_body = f'{my_full_name} received a msg from {msg_sender_jid} rather than coil'
-                                        va_msg_log_body = json.dumps(va_msg_log_body)
+                                        va_msg_log_body = asf.inform_error(va_msg_log_body)
                                         va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                         await self.send(va_msg_log)
-                                        print(va_msg_log_body)
                                 else:
                                     """Inform log """
                                     va_msg_log_body = f'{my_full_name} did not receive answer from coil'
-                                    va_msg_log_body = json.dumps(va_msg_log_body)
+                                    va_msg_log_body = asf.inform_error(va_msg_log_body)
                                     va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                     await self.send(va_msg_log)
-                                    print(va_msg_log_body)
                             else:
-                                print("No benefit from any coil")
                                 """inform log of issue"""
                                 va_msg_log_body = f'coils does not bring positive benefit to {my_full_name}'
-                                va_msg_log_body = json.dumps(va_msg_log_body)
+                                va_msg_log_body = asf.inform_error(va_msg_log_body)
                                 va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                 await self.send(va_msg_log)
 
                         else:
                             """Inform log """
                             va_msg_log_body = f'{my_full_name} did not receive answer from any coil'
-                            va_msg_log_body = json.dumps(va_msg_log_body)
+                            va_msg_log_body = asf.inform_error(va_msg_log_body)
                             va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                             await self.send(va_msg_log)
-                            print(va_msg_log_body)
                     else:
                         """Inform log """
                         va_msg_log_body = f'{my_full_name} did not receive answer from any coil. coils_msgs_df is empty'
-                        va_msg_log_body = json.dumps(va_msg_log_body)
+                        va_msg_log_body = asf.inform_error(va_msg_log_body)
                         va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                         await self.send(va_msg_log)
                         va_status_var = 'pre-auction'
-                        print(va_msg_log_body)
                 else:
                     va_status_var = 'pre-auction'
             elif va_status_var == "stand-by": # stand-by status for VA is very useful. It changes to pre-auction, when there are 3 minutes left to the end of current processing.
@@ -294,16 +268,14 @@ class VA(Agent):
         async def on_end(self):
             print({self.counter})
             """Inform log """
-            va_msg_end = f'{my_full_name} agent ended'
-            va_msg_end = json.dumps(va_msg_end)
+            va_msg_end = asf.send_activation_finish(my_full_name, 'end')
             va_msg_log = asf.msg_to_log(va_msg_end, my_dir)
             await self.send(va_msg_log)
 
         async def on_start(self):
             self.counter = 1
             """Inform log """
-            va_msg_start = f'{my_full_name} agent started'
-            va_msg_start = json.dumps(va_msg_start)
+            va_msg_start = asf.send_activation_finish(my_full_name, 'start')
             va_msg_log = asf.msg_to_log(va_msg_start, my_dir)
             await self.send(va_msg_log)
 
@@ -358,4 +330,3 @@ if __name__ == "__main__":
         va_status_var = "off"
         va_agent.stop()
         quit_spade()
-
