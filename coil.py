@@ -10,11 +10,12 @@ import argparse
 from spade import quit_spade
 import json
 import sys
+import socket
 
 class CoilAgent(Agent):
     class CoilBehav(PeriodicBehaviour):
         async def run(self):
-            global my_full_name, my_dir, wait_msg_time, coil_status_var, coil_started_at, stop_time, refresh_time, coil_agent, coil_df, bid_register_df, number_auction, auction_finish_at
+            global my_full_name, my_dir, wait_msg_time, coil_status_var, coil_started_at, stop_time, refresh_time, coil_agent, coil_df, bid_register_df, number_auction, auction_finish_at, ip_machine
             if coil_status_var == "auction":
                 """inform log of status"""
                 to_do = "search_auction"
@@ -251,13 +252,13 @@ class CoilAgent(Agent):
         async def on_end(self):
             print({self.counter})
             """Inform log """
-            coil_msg_end = asf.send_activation_finish(my_full_name, 'end')
+            coil_msg_end = asf.send_activation_finish(my_full_name, ip_machine, 'end')
             va_msg_log = asf.msg_to_log(coil_msg_end, my_dir)
             await self.send(va_msg_log)
 
         async def on_start(self):
             """inform log of start"""
-            coil_msg_start = asf.send_activation_finish(my_full_name, 'start')
+            coil_msg_start = asf.send_activation_finish(my_full_name, ip_machine, 'start')
             coil_msg_start = asf.msg_to_log(coil_msg_start, my_dir)
             await self.send(coil_msg_start)
             coil_activation_json = asf.activation_df(my_full_name, coil_started_at, coil_df)
@@ -295,6 +296,10 @@ if __name__ == "__main__":
     budget = coil_df.loc[0, 'budget']
     bid_register_df = asf.bid_register(my_name, my_full_name)
     number_auction = int(0)
+    "IP"
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip_machine = s.getsockname()[0]
     """XMPP info"""
     coil_jid = asf.agent_jid(my_dir, my_full_name)
     coil_passwd = asf.agent_passwd(my_dir, my_full_name)
@@ -309,4 +314,6 @@ if __name__ == "__main__":
         coil_status_var = "off"
         coil_agent.stop()
         quit_spade()
+
+
 
