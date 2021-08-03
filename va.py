@@ -19,6 +19,7 @@ class VA(Agent):
                 pre_auction_start = datetime.datetime.now()
                 auction_df.at[0, 'pre_auction_start'] = pre_auction_start
                 """inform log of status"""
+                print("ZZ", va_data_df)
                 va_inform_json = asf.inform_log_df(my_full_name, va_status_started_at, va_status_var, va_data_df).to_json(orient="records")
                 #va_inform_json = json.dumps(va_inform)
                 va_msg_log = asf.msg_to_log(va_inform_json, my_dir)
@@ -55,8 +56,9 @@ class VA(Agent):
                         jid_list = closest_coils_df['agent'].tolist()
                         auction_df.at[0, 'number_preauction'] = auction_df.at[0, 'number_preauction'] + 1
                         number = int(auction_df.at[0, 'number_preauction'])
+                        print("JJJ", jid_list)
                         """Inform log """
-                        va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'], jid_list)
+                        va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'], auction_df.at[0, 'active_coils'])
                         va_msg_log_body = va_msg_log_body.to_json(orient="records")
                         va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                         await self.send(va_msg_log)
@@ -204,7 +206,7 @@ class VA(Agent):
                                             va_status_var = "stand_by"
                                             """Inform log """
                                             va_msg_log_body = f' {coil_id } will be at {time_wh} in wh Terminado.'
-                                            va_msg_log_body = asf.inform_error(va_msg_log_body)
+                                            va_msg_log_body = asf.inform_finish(va_msg_log_body)
                                             va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                             await self.send(va_msg_log)
                                             """Inform log """
@@ -330,3 +332,5 @@ if __name__ == "__main__":
         va_status_var = "off"
         va_agent.stop()
         quit_spade()
+
+
