@@ -35,6 +35,7 @@ class BrowserAgent(Agent):
                 msg = await self.receive(timeout=wait_msg_time) # wait for a message for 60 seconds
                 if msg:
                     sender = str(msg.sender)
+                    sender_2 = sender[:-31]
                     sender = sender[:-33]
                     if sender == 'va':
                         va_data_df = pd.read_json(msg.body)
@@ -45,9 +46,11 @@ class BrowserAgent(Agent):
                                 """Checks for active users and their actual locations and reply"""
                                 va_name = va_data_df.loc[0, 'agent_type']
                                 br_msg_va_body = asf.check_active_users_loc_times(va_name)
-                                br_msg_va.body = br_msg_va_body
+                                br_msg_va_body_json = br_msg_va_body.to_json(orient="records")
+                                br_msg_va.body = br_msg_va_body_json
                                 await self.send(br_msg_va)
                                 """Inform log of performed request"""
+                                br_msg_va_body = asf.answer_va(br_msg_va_body, sender_2)
                                 br_msg_va_body = br_msg_va_body.to_json(orient="records")
                                 br_msg_log = asf.msg_to_log(br_msg_va_body, my_dir)
                                 await self.send(br_msg_log)
@@ -55,23 +58,27 @@ class BrowserAgent(Agent):
                                 """Checks for active coils and their actual locations and reply"""
                                 coil_request = va_data_df.loc[0, 'request_type']
                                 br_msg_va_body = asf.check_active_users_loc_times(va_data_df, my_name, coil_request)  # specifies request as argument
-                                br_msg_va.body = br_msg_va_body
+                                br_msg_va_body_json = br_msg_va_body.to_json(orient="records")
+                                br_msg_va.body = br_msg_va_body_json
                                 await self.send(br_msg_va)
                                 """Inform log of performed request"""
+                                br_msg_va_body = asf.answer_va(br_msg_va_body, sender_2)
+                                print("JJJ", br_msg_va_body)
+                                br_msg_va_body = br_msg_va_body.to_json(orient="records")
                                 br_msg_log = asf.msg_to_log(br_msg_va_body, my_dir)
                                 await self.send(br_msg_log)
                             else:
                                 """inform log"""
                                 va_id = va_data_df.loc[0, 'id']
                                 br_msg_log_body = f'{va_id} did not set a correct type of request'
-                                br_msg_log_body = json.dumps(br_msg_log_body)
+                                br_msg_log_body = asf.inform_error(br_msg_log_body)
                                 br_msg_log = asf.msg_to_log(br_msg_log_body, my_dir)
                                 await self.send(br_msg_log)
                         else:
                             """inform log"""
                             ca_id = va_data_df.loc[0, 'id']
                             br_msg_log_body = f'{ca_id} did not set a correct purpose'
-                            br_msg_log_body = json.dumps(br_msg_log_body)
+                            br_msg_log_body = asf.inform_error(br_msg_log_body)
                             br_msg_log = asf.msg_to_log(br_msg_log_body, my_dir)
                             await self.send(br_msg_log)
                     elif sender == 'c0':
@@ -81,7 +88,7 @@ class BrowserAgent(Agent):
                         if coil_data_df.loc[0, 'purpose'] == "request":
                             if coil_data_df.loc[0, 'request_type'] == "my location":
                                 coil_code = coil_data_df.loc[0, 'Code']
-                                msg_to_log = asf.order_code_log(coil_code)
+                                msg_to_log = asf.order_code_log(coil_code, my_full_name)
                                 br_loc_log = asf.msg_to_log(msg_to_log, my_dir)
                                 await self.send(br_loc_log)
                                 i = 0
@@ -97,40 +104,45 @@ class BrowserAgent(Agent):
                                             br_msg_coil.to = br_msg_coil_jid[:-9]
                                             br_msg_coil.body = loc_df.to_json()
                                             await self.send(br_msg_coil)
+                                            "Inform log"
+                                            br_msg_va_body = asf.answer_coil(loc_df, br_msg_coil_jid[:-9])
+                                            br_msg_va_body = br_msg_va_body.to_json(orient="records")
+                                            br_msg_log = asf.msg_to_log(br_msg_va_body, my_dir)
+                                            await self.send(br_msg_log)
                                             break
                                         else:
                                             """inform log"""
                                             coil_id = coil_data_df.loc[0, 'id']
                                             br_msg_log_body = f'{coil_id} did not set a msg from Log'
-                                            br_msg_log_body = json.dumps(br_msg_log_body)
+                                            br_msg_log_body = asf.inform_error(br_msg_log_body)
                                             br_msg_log = asf.msg_to_log(br_msg_log_body, my_dir)
                                             await self.send(br_msg_log)
                                     else:
                                         """inform log"""
                                         coil_id = coil_data_df.loc[0, 'id']
                                         br_msg_log_body = f'{coil_id} did not receive any msg in the last 20s'
-                                        br_msg_log_body = json.dumps(br_msg_log_body)
+                                        br_msg_log_body = asf.inform_error(br_msg_log_body)
                                         br_msg_log = asf.msg_to_log(br_msg_log_body, my_dir)
                                         await self.send(br_msg_log)
                             else:
                                 """inform log"""
                                 coil_id = coil_data_df.loc[0, 'id']
                                 br_msg_log_body = f'{coil_id} did not set a correct type of request'
-                                br_msg_log_body = json.dumps(br_msg_log_body)
+                                br_msg_log_body = asf.inform_error(br_msg_log_body)
                                 br_msg_log = asf.msg_to_log(br_msg_log_body, my_dir)
                                 await self.send(br_msg_log)
                         else:
                             """inform log"""
                             coil_id = coil_data_df.loc[0, 'id']
                             br_msg_log_body = f'{coil_id} did not set a correct purpose'
-                            br_msg_log_body = json.dumps(br_msg_log_body)
+                            br_msg_log_body = asf.inform_error(br_msg_log_body)
                             br_msg_log = asf.msg_to_log(br_msg_log_body, my_dir)
                             await self.send(br_msg_log)
 
                 else:
                     """inform log"""
                     br_msg_log_body = f'{my_name} did not receive a message in the last {wait_msg_time}s'
-                    br_msg_log_body = json.dumps(br_msg_log_body)
+                    br_msg_log_body = asf.inform_error(br_msg_log_body)
                     br_msg_log = asf.msg_to_log(br_msg_log_body, my_dir)
                     await self.send(br_msg_log)
             elif br_status_var == "stand-by":  # stand-by status for BR is not very useful, just in case we need the agent to be alive, but not operative. At the moment, it won      t change to stand-by.
@@ -154,16 +166,14 @@ class BrowserAgent(Agent):
         async def on_end(self):
             print({self.counter})
             """Inform log """
-            browser_msg_ended = f'{my_full_name} agent ended'
-            browser_msg_ended = json.dumps(browser_msg_ended)
+            browser_msg_ended = asf.send_activation_finish(my_full_name, 'end')
             browser_msg_ended = asf.msg_to_log(browser_msg_ended, my_dir)
             await self.send(browser_msg_ended)
 
         async def on_start(self):
             self.counter = 1
             """Inform log """
-            browser_msg_start = f'{my_full_name} agent started'
-            browser_msg_start = json.dumps(browser_msg_start)
+            browser_msg_start = asf.send_activation_finish(my_full_name, 'start')
             browser_msg_start = asf.msg_to_log(browser_msg_start, my_dir)
             await self.send(browser_msg_start)
 
