@@ -63,7 +63,6 @@ class BrowserAgent(Agent):
                                 await self.send(br_msg_va)
                                 """Inform log of performed request"""
                                 br_msg_va_body = asf.answer_va(br_msg_va_body, sender_2)
-                                print("JJJ", br_msg_va_body)
                                 br_msg_va_body = br_msg_va_body.to_json(orient="records")
                                 br_msg_log = asf.msg_to_log(br_msg_va_body, my_dir)
                                 await self.send(br_msg_log)
@@ -147,6 +146,7 @@ class BrowserAgent(Agent):
                     await self.send(br_msg_log)
             elif br_status_var == "stand-by":  # stand-by status for BR is not very useful, just in case we need the agent to be alive, but not operative. At the moment, it won      t change to stand-by.
                 """inform log of status"""
+                print("MMM", br_data_df)
                 br_inform_json = asf.inform_log_df(my_full_name, br_started_at, br_status_var, br_data_df).to_json(orient="records")
                 br_msg_log = asf.msg_to_log(br_inform_json, my_dir)
                 await self.send(br_msg_log)
