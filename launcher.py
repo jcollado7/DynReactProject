@@ -9,16 +9,17 @@ from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
 from spade.template import Template
 import json
+import socket
 
 
 class LaunchAgent(Agent):
     class LABehav(OneShotBehaviour):
         async def run(self):
-            global la_status_var, my_full_name, la_started_at, stop_time, my_dir, wait_msg_time, list_ware, string_operations
-            """inform log of status"""
-            '''la_activation_json = asf.activation_df(my_full_name, la_started_at)
-            la_msg_log = asf.msg_to_log(la_activation_json, my_dir)
-            await self.send(la_msg_log)'''
+            global la_status_var, my_full_name, la_started_at, stop_time, my_dir, wait_msg_time, list_ware, string_operations, ip_machine
+            """Inform log """
+            la_msg_start = asf.send_activation_finish(my_full_name, ip_machine, 'start')
+            la_msg_log = asf.msg_to_log(la_msg_start, my_dir)
+            await self.send(la_msg_log)
             """Send new order to log"""
             if order_code != "No":
                 la_inform_log_json = asf.order_file(my_full_name, order_code, steel_grade, thickness, width_coils,
@@ -45,19 +46,10 @@ class LaunchAgent(Agent):
 
         async def on_end(self):
             """Inform log """
-            '''la_msg_end = f'{my_full_name} agent ended'
-            la_msg_end = json.dumps(la_msg_end)
-            la_msg_end = asf.msg_to_log(la_msg_end, my_dir)
-            await self.send(la_msg_end)'''
             await self.agent.stop()
 
         async def on_start(self):
             self.counter = 1
-            """Inform log """
-            '''la_msg_start = f'{my_full_name} agent started'
-            la_msg_start = json.dumps(la_msg_start)
-            la_msg_start = asf.msg_to_log(la_msg_start, my_dir)
-            await self.send(la_msg_start)'''
 
     async def setup(self):
         self.b = self.LABehav()
@@ -120,6 +112,11 @@ if __name__ == "__main__":
     string_operations = args.string_operations
     """Save to csv who I am"""
     la_data_df = asf.set_agent_parameters(my_dir, my_name, my_full_name)
+    "IP"
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip_machine = s.getsockname()[0]
+
     """XMPP info"""
     la_jid = asf.agent_jid(my_dir, my_full_name)
     la_passwd = asf.agent_passwd(my_dir, my_full_name)
@@ -136,4 +133,5 @@ if __name__ == "__main__":
             la_status_var = "off"
             la_agent.stop()
     quit_spade()
+
 
