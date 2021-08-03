@@ -24,9 +24,29 @@ class LogAgent(Agent):
                 if msg:
                     print(f"received msg number {self.counter}")
                     self.counter += 1
-                    logger.info(msg.body)
+                    #logger.info(msg.body)
                     msg_sender_jid0 = str(msg.sender)
                     msg_sender_jid = msg_sender_jid0[:-31]
+                    fileh = logging.FileHandler(f'{my_dir}/{my_name}.log')
+                    formatter = logging.Formatter(f'%(asctime)s;%(levelname)s;{msg_sender_jid};%(pathname)s;%(message)s')
+                    fileh.setFormatter(formatter)
+                    log = logging.getLogger()  # root logger
+                    for hdlr in log.handlers[:]:  # remove all old handlers
+                        log.removeHandler(hdlr)
+                    log.addHandler(fileh)
+                    if args.verbose == "DEBUG":
+                        logger.setLevel(logging.DEBUG)
+                    elif args.verbose == "INFO":
+                        logger.setLevel(logging.INFO)
+                    elif args.verbose == "WARNING":
+                        logger.setLevel(logging.WARNING)
+                    elif args.verbose == "ERROR":
+                        logger.setLevel(logging.ERROR)
+                    elif args.verbose == "CRITICAL":
+                        logger.setLevel(logging.CRITICAL)
+                    else:
+                        print('not valid verbosity')
+                    logger.info(msg.body)
                     x = re.search("won auction to process", msg.body)
                     if x:
                         auction = msg.body.split(" ")
@@ -38,14 +58,12 @@ class LogAgent(Agent):
                         logger.info(msg.body)
                         print("Coil status updated")
                     elif msg_sender_jid == "dynrct_r00":
-                        print("MSG", msg)
                         launcher_df = pd.read_json(msg.body)
                         asf.change_warehouse(launcher_df, my_dir)
                         coils = launcher_df.loc[0,'list_coils']
                         locations = launcher_df.loc[0, 'list_ware']
                         code = launcher_df.loc[0, 'order_code']
-                        order = f' Order Code: {code} with code coils: [{coils}] registered in locations [{locations}].'
-                        order = json.dumps(order)
+                        order = asf.order_register(my_full_name, code, coils, locations)
                         logger.info(order)
                     elif msg_sender_jid == "browser":
                         x = re.search("{", msg.body)
@@ -58,21 +76,21 @@ class LogAgent(Agent):
                                     await self.send(msg_to_br)
                 else:
                     msg = f"Log_agent didn't receive any msg in the last {wait_msg_time}s"
-                    msg = json.dumps(msg)
+                    msg = asf.inform_error(msg)
                     logger.debug(msg)
             elif log_status_var == "stand-by":
-                status_msg = f"Log agent status: {log_status_var}"
-                status_msg = json.dumps(status_msg)
-                logger.debug(status_msg)
+                status_log = asf.log_status(my_full_name, log_status_var)
+                logger.debug(status_log)
 
                 log_status_var = "on"
-                on_msg = f"Log agent status: {log_status_var}"
-                on_msg = json.dumps(on_msg)
-                logger.debug(on_msg)
+                status_log = asf.log_status(my_full_name, log_status_var)
+                logger.debug(status_log)
             else:
-                logger.debug(f"Log agent status: {log_status_var}")
+                status_log = asf.log_status(my_full_name, log_status_var)
+                logger.debug(status_log)
                 log_status_var = "stand-by"
-                logger.debug(f"Log agent status: {log_status_var}")
+                status_log = asf.log_status(my_full_name, log_status_var)
+                logger.debug(status_log)
 
         async def on_end(self):
             await self.agent.stop()
@@ -85,6 +103,27 @@ class LogAgent(Agent):
         template = Template()
         template.metadata = {"performative": "inform"}
         self.add_behaviour(b, template)
+        fileh = logging.FileHandler(f'{my_dir}/{my_name}.log')
+        formatter = logging.Formatter(f'%(asctime)s;%(levelname)s;{my_full_name};%(pathname)s;%(message)s')
+        fileh.setFormatter(formatter)
+        log = logging.getLogger()  # root logger
+        for hdlr in log.handlers[:]:  # remove all old handlers
+            log.removeHandler(hdlr)
+        log.addHandler(fileh)
+        if args.verbose == "DEBUG":
+            logger.setLevel(logging.DEBUG)
+        elif args.verbose == "INFO":
+            logger.setLevel(logging.INFO)
+        elif args.verbose == "WARNING":
+            logger.setLevel(logging.WARNING)
+        elif args.verbose == "ERROR":
+            logger.setLevel(logging.ERROR)
+        elif args.verbose == "CRITICAL":
+            logger.setLevel(logging.CRITICAL)
+        else:
+            print('not valid verbosity')
+        start_msg = asf.send_activation_finish(my_full_name, 'start')
+        logger.debug(start_msg)
 
 
 if __name__ == "__main__":
@@ -106,26 +145,6 @@ if __name__ == "__main__":
 
     """Logger info"""
     logger = logging.getLogger(__name__)
-    formatter = logging.Formatter('%(asctime)s;%(levelname)s;%(name)s;%(pathname)s;%(message)s')  # parameters saved to log file. message will be the *.json
-    file_handler = logging.FileHandler(f'{my_dir}/{my_name}.log')
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    if args.verbose == "DEBUG":
-        logger.setLevel(logging.DEBUG)
-    elif args.verbose == "INFO":
-        logger.setLevel(logging.INFO)
-    elif args.verbose == "WARNING":
-        logger.setLevel(logging.WARNING)
-    elif args.verbose == "ERROR":
-        logger.setLevel(logging.ERROR)
-    elif args.verbose == "CRITICAL":
-        logger.setLevel(logging.CRITICAL)
-    else:
-        print('not valid verbosity')
-
-    start_msg = f"{my_name}_agent started"
-    start_msg = json.dumps(start_msg)
-    logger.debug(start_msg)
 
     """XMPP info"""
     log_jid = asf.agent_jid(my_dir, my_full_name)
@@ -145,4 +164,3 @@ if __name__ == "__main__":
         stop_msg_log = json.dumps(stop_msg_log)
         logger.critical(stop_msg_log)
         quit_spade()
- 
