@@ -13,6 +13,7 @@ import os
 import logging.handlers as handlers
 import re
 import json
+import socket
 
 
 class LogAgent(Agent):
@@ -65,12 +66,13 @@ class LogAgent(Agent):
                         print("Coil status updated")
                     elif msg_sender_jid == "launcher":
                         launcher_df = pd.read_json(msg.body)
-                        asf.change_warehouse(launcher_df, my_dir)
-                        coils = launcher_df.loc[0,'list_coils']
-                        locations = launcher_df.loc[0, 'list_ware']
-                        code = launcher_df.loc[0, 'order_code']
-                        order = asf.order_register(my_full_name, code, coils, locations)
-                        logger.info(order)
+                        if 'order_code' in launcher_df:
+                            asf.change_warehouse(launcher_df, my_dir)
+                            coils = launcher_df.loc[0,'list_coils']
+                            locations = launcher_df.loc[0, 'list_ware']
+                            code = launcher_df.loc[0, 'order_code']
+                            order = asf.order_register(my_full_name, code, coils, locations)
+                            logger.info(order)
                     elif msg_sender_jid == "browser":
                         x = re.search("{", msg.body)
                         if x:
@@ -128,7 +130,11 @@ class LogAgent(Agent):
             logger.setLevel(logging.CRITICAL)
         else:
             print('not valid verbosity')
-        start_msg = asf.send_activation_finish(my_full_name, 'start')
+        "IP"
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip_machine = s.getsockname()[0]
+        start_msg = asf.send_activation_finish(my_full_name, ip_machine, 'start')
         logger.debug(start_msg)
 
 
