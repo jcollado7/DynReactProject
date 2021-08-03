@@ -343,7 +343,6 @@ def process_df(df, coil_winner_df):
                    'setup_speed', 'ancho', 'largo', 'espesor'])
         process_df = process_df.append(new_line_df, ignore_index=True)
         process_df = process_df.reset_index(drop=True)
-        print(f'process_df1: {process_df}')
         processing_time = 30 #600
         process_df['start_auction_before'].iloc[-1] = 1.5 * 60
         start_auction_before = process_df['start_auction_before'].iloc[-1]
@@ -353,7 +352,6 @@ def process_df(df, coil_winner_df):
         start_next_auction_at = process_df['fab_end'].iloc[-1] - datetime.timedelta(seconds=start_auction_before)
         process_df['start_next_auction_at'].iloc[-1] = start_next_auction_at
         a = process_df['fab_start'].iloc[-1]
-        print(f'entered_option_1: {a}')
     else:
         process_df.loc[process_df.index.max() + 1, 'start_auction_before'] = ""
         processing_time = 100
@@ -365,12 +363,9 @@ def process_df(df, coil_winner_df):
         start_next_auction_at = process_df['fab_end'].iloc[-1] - datetime.timedelta(seconds=process_df['start_auction_before'].iloc[-1])
         process_df['start_next_auction_at'].iloc[-1] = start_next_auction_at
         a = process_df['fab_start'].iloc[-1]
-        print(f'entered_option_2: {a}')
     process_df['ancho'].iloc[-1] = coil_winner_df.loc[0, 'ancho']
     process_df['largo'].iloc[-1] = coil_winner_df.loc[0, 'largo']
     process_df['espesor'].iloc[-1] = coil_winner_df.loc[0, 'espesor']
-
-    print(f'process_df2: {process_df}')
     return process_df
 
 def my_full_name(agent_name, agent_number):
@@ -424,7 +419,6 @@ def agent_jid(agent_directory, agent_full_name):
     jid_direction = agents_df.loc[agents_df.Name == agent_full_name, 'User name']
     jid_direction = jid_direction.values
     jid_direction = jid_direction[0]
-    print(f"{jid_direction}")
     return jid_direction
 
 def agent_passwd(agent_directory, agent_full_name):
@@ -829,7 +823,7 @@ def send_to_va_msg(my_full_name, bid, to, level):
     df.loc[0, 'to'] = to
     return df
 
-def send_activation_finish(my_full_name, level):
+def send_activation_finish(my_full_name, ip_machine, level):
     df = pd.DataFrame()
     df.loc[0, 'id'] = my_full_name
     df.loc[0, 'purpose'] = 'inform change'
@@ -837,6 +831,7 @@ def send_activation_finish(my_full_name, level):
         df.loc[0, 'msg'] = 'agent started'
     elif level == 'end':
         df.loc[0, 'msg'] = 'agent ended'
+    df.loc[0, 'IP'] = ip_machine
     return df.to_json(orient="records")
 
 def inform_error(msg):
@@ -1024,6 +1019,7 @@ def msg_to_launcher(msg, agent_directory):
     msg_la.body = msg
     msg_la.set_metadata("performative", "inform")
     return msg_la
+
 
 
 
