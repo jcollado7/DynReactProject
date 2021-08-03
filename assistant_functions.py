@@ -198,6 +198,7 @@ def counterbid_evaluation(coil_msgs_df, va_data_df):
 def auction_kpis(va_data_df, auction_df, process_df, winner_df):
     df = auction_blank_df()
     #va
+    df.at[0, 'purpose'] = 'inform'
     df.at[0, 'id_va'] = va_data_df.loc[0, 'id']
     df.at[0, 'accumulated_profit_va'] = va_data_df.loc[0, 'accumulated_profit']
     #coil_winner
@@ -258,6 +259,11 @@ def gantt(auction_kpis_df):
 
     print("GANTT: \n", df)
     return df
+
+def change_agent(my_full_name, my_dir):
+    df = pd.read_csv('agents.csv', header=0, delimiter=",", engine='python')
+    df.loc[df.Name == my_full_name, 'Code'] = ''
+    df.to_csv(f'{my_dir}''/''agents.csv', index=False, header=True)
 
 def auction_entry(va_data_df, coil_df,number,location_df):
     dif_ancho = coil_df.loc[0,'ancho'] - va_data_df.loc[0, 'ancho']
@@ -498,6 +504,8 @@ def activation_df(agent_full_name, status_started_at, df, *args):
     act_df.at[0, 'time'] = datetime.datetime.now()
     act_df.at[0, 'status'] = "on"
     act_df.at[0, 'activation time'] = status_started_at
+    if act_df.at[0, 'id'] == 'browser':
+        act_df.drop(['location'], axis=1)
     if args:
         df = args[0]
         act_df = act_df.join(df)
@@ -515,6 +523,8 @@ def inform_log_df(agent_full_name, status_started_at, status, df, *args, **kwarg
     inf_df.at[0, 'time'] = datetime.datetime.now()
     inf_df.at[0, 'status'] = status
     inf_df.at[0, 'activation time'] = status_started_at
+    if inf_df.at[0, 'id'] == 'browser':
+        inf_df.drop(['location'], axis=1)
     if args:
         inf_df.at[0, 'to_do'] = args[0]  # In the case of stand-by coil, it passes to_do = "searching_auction" so that browser can search this coil when a resource looks for processing.
     if kwargs:  # in case did not enter auction
@@ -685,7 +695,7 @@ def msg_to_browser(order_body, agent_directory):
 
 def change_warehouse(launcher_df, my_dir):
     va = launcher_df.loc[0, 'list_ware'].split(',')
-    lc = launcher_df.loc[0,'list_coils'].split(',')
+    lc = launcher_df.loc[0, 'list_coils'].split(',')
     df = pd.read_csv('agents.csv', header=0, delimiter=",", engine='python')
     j = 0
     my_dir = os.getcwd()
@@ -717,6 +727,8 @@ def order_file(agent_full_name, order_code, steel_grade, thickness, width_coils,
                                               'num_coils', 'list_coils', 'each_coil_price', 'string_operations',
                                               'date'])
     order_msg_log.at[0, 'id'] = agent_full_name
+    order_msg_log.at[0, 'purpose'] = 'setup'
+    order_msg_log.at[0, 'msg'] = 'new order'
     order_msg_log.at[0, 'order_code'] = order_code
     order_msg_log.at[0, 'steel_grade'] = steel_grade
     order_msg_log.at[0, 'thickness_coils'] = thickness
@@ -727,16 +739,17 @@ def order_file(agent_full_name, order_code, steel_grade, thickness, width_coils,
     order_msg_log.at[0, 'list_ware'] = list_ware
     order_msg_log.at[0, 'string_operations'] = string_operations
     order_msg_log.at[0, 'date'] = date.today().strftime('%Y-%m-%d')
+    order_msg_log.at[0, 'to'] = 'log'
     return order_msg_log.to_json(orient="records")
 
 def order_code_log(coil_code, my_full_name):
     order_coil_df = pd.DataFrame([], columns = ['Code'])
     order_coil_df.at[0, 'Code'] = coil_code
     order_coil_df.loc[0, 'purpose'] = "location_coil"
-    order_coil_df.loc[0, 'From'] = my_full_name
-    order_coil_df.loc[0, 'To'] = 'log'
-    order_coil_df.loc[0, 'seq'] = '2x2'
-    order_coil_df = order_coil_df[['seq', 'From', 'Code', 'purpose', 'To']]
+    order_coil_df.loc[0, 'id'] = my_full_name
+    order_coil_df.loc[0, 'to'] = 'log'
+    order_coil_df.loc[0, 'msg'] = 'seq_2x2'
+    order_coil_df = order_coil_df[['id', 'Code', 'purpose', 'msg', 'to']]
     return order_coil_df.to_json(orient="records")
 
 def loc_of_coil(coil_df):
@@ -758,54 +771,53 @@ def loc_of_coil(coil_df):
 
 def request_browser(df):
     df = df.loc[:, 'id':'request_type']
-    df = df.rename(columns={'id': 'from'})
     df.loc[0, 'to'] = 'browser'
-    df.loc[0, 'seq'] = '1x1'
-    df = df[['seq', 'from', 'purpose', 'request_type', 'to']]
+    df.loc[0, 'msg'] = 'seq_1x1'
+    df = df[['id', 'purpose', 'request_type', 'msg', 'to']]
     return df
 
 def answer_va(df, sender):
-    df.loc[0, 'seq'] = '1x1'
-    df.loc[0, "from"] = 'browser'
+    df.loc[0, 'msg'] = 'seq_1x1'
+    df.loc[0, "id"] = 'browser'
     df.loc[0, "purpose"] = 'answer'
     df.loc[0, "to"] = sender
-    df = df[['seq', 'from', 'purpose', 'location', 'to']]
+    df = df[['id', 'purpose', 'msg', 'location', 'to']]
     return df
 
 def answer_coil(df, sender):
-    df.loc[0, 'seq'] = '2x2'
-    df.loc[0, "from"] = 'browser'
+    df.loc[0, 'msg'] = 'seq_2x2'
+    df.loc[0, "id"] = 'browser'
     df.loc[0, "purpose"] = 'answer'
     df.loc[0, "to"] = sender
-    df = df[['seq', 'from', 'purpose', 'location', 'to']]
+    df = df[['id', 'purpose', 'msg','location', 'to']]
     return df
 
 def send_va(my_full_name, number, auction_level, jid_list):
     df = pd.DataFrame()
-    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'id'] = my_full_name
     df.loc[0, 'purpose'] = 'inform'
     if auction_level == 1:
-        df.loc[0, 'msg'] = 'pre-auction'
+        df.loc[0, 'msg'] = 'send pre-auction'
     elif auction_level == 2:
-        df.loc[0, 'msg'] = 'auction'
+        df.loc[0, 'msg'] = 'send auction'
     elif auction_level == 3:
         df.loc[0, 'msg'] = 'send acceptance'
     df.loc[0, 'number'] = number
-    df.loc[0, 'to'] = jid_list
+    df.loc[0, 'to'] = [jid_list]
     return df
 
 def send_coil(my_full_name):
     df = pd.DataFrame()
-    df.loc[0, 'seq'] = '2x2'
-    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'id'] = my_full_name
     df.loc[0, 'agent_type'] = 'coil'
     df.loc[0, 'purpose'] = 'my location'
+    df.loc[0, 'msg'] = 'seq_2x2'
     df.loc[0, 'to'] = 'browser'
     return df
 
 def send_to_va_msg(my_full_name, bid, to, level):
     df = pd.DataFrame()
-    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'id'] = my_full_name
     df.loc[0, 'agent_type'] = 'coil'
     df.loc[0, 'purpose'] = 'inform'
     if level == '1':
@@ -819,15 +831,21 @@ def send_to_va_msg(my_full_name, bid, to, level):
 
 def send_activation_finish(my_full_name, level):
     df = pd.DataFrame()
-    df.loc[0, 'from'] = my_full_name
-    df.loc[0, 'purpose'] = 'inform'
+    df.loc[0, 'id'] = my_full_name
+    df.loc[0, 'purpose'] = 'inform change'
     if level == 'start':
-        df.loc[0, 'msg'] = 'start'
+        df.loc[0, 'msg'] = 'agent started'
     elif level == 'end':
-        df.loc[0, 'msg'] = 'ended'
+        df.loc[0, 'msg'] = 'agent ended'
     return df.to_json(orient="records")
 
 def inform_error(msg):
+    df = pd.DataFrame()
+    df.loc[0, 'purpose'] = 'inform error'
+    df.loc[0, 'msg'] = msg
+    return df.to_json(orient="records")
+
+def inform_finish(msg):
     df = pd.DataFrame()
     df.loc[0, 'purpose'] = 'inform'
     df.loc[0, 'msg'] = msg
@@ -835,7 +853,7 @@ def inform_error(msg):
 
 def won_auction(my_full_name, va_coil_msg_sender_f, this_time):
     df = pd.DataFrame()
-    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'id'] = my_full_name
     df.loc[0, 'purpose'] = 'inform'
     df.loc[0, 'msg'] = f'won auction in {va_coil_msg_sender_f}'
     df.loc[0, 'time'] = this_time
@@ -843,14 +861,14 @@ def won_auction(my_full_name, va_coil_msg_sender_f, this_time):
 
 def finish_va_auction(my_full_name, number):
     df = pd.DataFrame()
-    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'id'] = my_full_name
     df.loc[0, 'purpose'] = 'inform'
     df.loc[0, 'msg'] = f'finish auction number: {number}.'
     return df.to_json(orient="records")
 
 def order_register(my_full_name, code, coils, locations):
     df = pd.DataFrame()
-    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'id'] = my_full_name
     df.loc[0, 'purpose'] = 'inform'
     df.loc[0, 'msg'] = 'new order from launcher'
     df.loc[0, 'code'] = code
@@ -860,10 +878,12 @@ def order_register(my_full_name, code, coils, locations):
 
 def log_status(my_full_name, status):
     df = pd.DataFrame()
-    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'id'] = my_full_name
     df.loc[0, 'purpose'] = 'inform'
-    df.loc[0, 'status'] = status
+    df.loc[0, 'msg'] = status
     return df.to_json(orient="records")
+
+
 
 
 
@@ -1004,5 +1024,6 @@ def msg_to_launcher(msg, agent_directory):
     msg_la.body = msg
     msg_la.set_metadata("performative", "inform")
     return msg_la
+
 
 
