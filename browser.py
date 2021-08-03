@@ -10,12 +10,13 @@ import assistant_functions as asf
 import argparse
 import os
 import json
+import socket
 
 
 class BrowserAgent(Agent):
     class BRBehav(CyclicBehaviour):
         async def run(self):
-            global br_status_var, my_full_name, br_started_at, stop_time, my_dir, wait_msg_time, br_coil_name_int_fab, br_int_fab, br_data_df
+            global br_status_var, my_full_name, br_started_at, stop_time, my_dir, wait_msg_time, br_coil_name_int_fab, br_int_fab, br_data_df, ip_machine
             if (br_search != "No")&(datetime.datetime.now() < searching_time):
                 br_search_browser = asf.order_to_search(br_search, my_full_name, my_dir)
                 await self.send(br_search_browser)
@@ -146,7 +147,6 @@ class BrowserAgent(Agent):
                     await self.send(br_msg_log)
             elif br_status_var == "stand-by":  # stand-by status for BR is not very useful, just in case we need the agent to be alive, but not operative. At the moment, it won      t change to stand-by.
                 """inform log of status"""
-                print("MMM", br_data_df)
                 br_inform_json = asf.inform_log_df(my_full_name, br_started_at, br_status_var, br_data_df).to_json(orient="records")
                 br_msg_log = asf.msg_to_log(br_inform_json, my_dir)
                 await self.send(br_msg_log)
@@ -166,14 +166,14 @@ class BrowserAgent(Agent):
         async def on_end(self):
             print({self.counter})
             """Inform log """
-            browser_msg_ended = asf.send_activation_finish(my_full_name, 'end')
+            browser_msg_ended = asf.send_activation_finish(my_full_name, ip_machine, 'end')
             browser_msg_ended = asf.msg_to_log(browser_msg_ended, my_dir)
             await self.send(browser_msg_ended)
 
         async def on_start(self):
             self.counter = 1
             """Inform log """
-            browser_msg_start = asf.send_activation_finish(my_full_name, 'start')
+            browser_msg_start = asf.send_activation_finish(my_full_name, ip_machine, 'start')
             browser_msg_start = asf.msg_to_log(browser_msg_start, my_dir)
             await self.send(browser_msg_start)
 
@@ -213,6 +213,11 @@ if __name__ == "__main__":
     """Save to csv who I am"""
     br_data_df = asf.set_agent_parameters(my_dir, my_name, my_full_name)
     #opf.br_create_register(my_dir, my_full_name)  # register to store entrance and exit
+    "IP"
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip_machine = s.getsockname()[0]
+
     """XMPP info"""
     br_jid = asf.agent_jid(my_dir, my_full_name)
     br_passwd = asf.agent_passwd(my_dir, my_full_name)
