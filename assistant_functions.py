@@ -605,7 +605,6 @@ def check_active_users_loc_times(va_data_df, agent_name, *args):
         coil_df = coil_df.append(row_df)
     coil_df = coil_df.sort_index()
     coil_df = coil_df.reset_index(drop=True)
-    coil_df = coil_df.to_json(orient="records")
     return coil_df
 
 def br_get_requested_df(agent_name, *args):
@@ -654,7 +653,7 @@ def req_active_users_loc_times(agent_df, *args):
         va_request_df.at[0, 'request_type'] = args[0]
     else:
         va_request_df.at[0, 'request_type'] = "active users location & op_time"
-    return va_request_df.to_json()
+    return va_request_df
 
 def req_coil_loc(agent_df, *args):
     """Returns msg body to send to browser as a json"""
@@ -728,12 +727,16 @@ def order_file(agent_full_name, order_code, steel_grade, thickness, width_coils,
     order_msg_log.at[0, 'list_ware'] = list_ware
     order_msg_log.at[0, 'string_operations'] = string_operations
     order_msg_log.at[0, 'date'] = date.today().strftime('%Y-%m-%d')
-    return order_msg_log.to_json()
+    return order_msg_log.to_json(orient="records")
 
-def order_code_log(coil_code):
+def order_code_log(coil_code, my_full_name):
     order_coil_df = pd.DataFrame([], columns = ['Code'])
     order_coil_df.at[0, 'Code'] = coil_code
     order_coil_df.loc[0, 'purpose'] = "location_coil"
+    order_coil_df.loc[0, 'From'] = my_full_name
+    order_coil_df.loc[0, 'To'] = 'log'
+    order_coil_df.loc[0, 'seq'] = '2x2'
+    order_coil_df = order_coil_df[['seq', 'From', 'Code', 'purpose', 'To']]
     return order_coil_df.to_json(orient="records")
 
 def loc_of_coil(coil_df):
@@ -751,14 +754,121 @@ def loc_of_coil(coil_df):
 
 
 
+'''Functions to improve readability in messages. Improve functions'''
+
+def request_browser(df):
+    df = df.loc[:, 'id':'request_type']
+    df = df.rename(columns={'id': 'from'})
+    df.loc[0, 'to'] = 'browser'
+    df.loc[0, 'seq'] = '1x1'
+    df = df[['seq', 'from', 'purpose', 'request_type', 'to']]
+    return df
+
+def answer_va(df, sender):
+    df.loc[0, 'seq'] = '1x1'
+    df.loc[0, "from"] = 'browser'
+    df.loc[0, "purpose"] = 'answer'
+    df.loc[0, "to"] = sender
+    df = df[['seq', 'from', 'purpose', 'location', 'to']]
+    return df
+
+def answer_coil(df, sender):
+    df.loc[0, 'seq'] = '2x2'
+    df.loc[0, "from"] = 'browser'
+    df.loc[0, "purpose"] = 'answer'
+    df.loc[0, "to"] = sender
+    df = df[['seq', 'from', 'purpose', 'location', 'to']]
+    return df
+
+def send_va(my_full_name, number, auction_level, jid_list):
+    df = pd.DataFrame()
+    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'purpose'] = 'inform'
+    if auction_level == 1:
+        df.loc[0, 'msg'] = 'pre-auction'
+    elif auction_level == 2:
+        df.loc[0, 'msg'] = 'auction'
+    elif auction_level == 3:
+        df.loc[0, 'msg'] = 'send acceptance'
+    df.loc[0, 'number'] = number
+    df.loc[0, 'to'] = jid_list
+    return df
+
+def send_coil(my_full_name):
+    df = pd.DataFrame()
+    df.loc[0, 'seq'] = '2x2'
+    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'agent_type'] = 'coil'
+    df.loc[0, 'purpose'] = 'my location'
+    df.loc[0, 'to'] = 'browser'
+    return df
+
+def send_to_va_msg(my_full_name, bid, to, level):
+    df = pd.DataFrame()
+    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'agent_type'] = 'coil'
+    df.loc[0, 'purpose'] = 'inform'
+    if level == '1':
+        df.loc[0, 'msg'] = 'send bid'
+        df.loc[0, 'Bid'] = bid
+    elif level == 2:
+        df.loc[0, 'msg'] = 'send counterbid'
+        df.loc[0, 'counterbid'] = bid
+    df.loc[0, 'to'] = to
+    return df
+
+def send_activation_finish(my_full_name, level):
+    df = pd.DataFrame()
+    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'purpose'] = 'inform'
+    if level == 'start':
+        df.loc[0, 'msg'] = 'start'
+    elif level == 'end':
+        df.loc[0, 'msg'] = 'ended'
+    return df.to_json(orient="records")
+
+def inform_error(msg):
+    df = pd.DataFrame()
+    df.loc[0, 'purpose'] = 'inform'
+    df.loc[0, 'msg'] = msg
+    return df.to_json(orient="records")
+
+def won_auction(my_full_name, va_coil_msg_sender_f, this_time):
+    df = pd.DataFrame()
+    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'purpose'] = 'inform'
+    df.loc[0, 'msg'] = f'won auction in {va_coil_msg_sender_f}'
+    df.loc[0, 'time'] = this_time
+    return df.to_json(orient="records")
+
+def finish_va_auction(my_full_name, number):
+    df = pd.DataFrame()
+    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'purpose'] = 'inform'
+    df.loc[0, 'msg'] = f'finish auction number: {number}.'
+    return df.to_json(orient="records")
+
+def order_register(my_full_name, code, coils, locations):
+    df = pd.DataFrame()
+    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'purpose'] = 'inform'
+    df.loc[0, 'msg'] = 'new order from launcher'
+    df.loc[0, 'code'] = code
+    df.loc[0, 'coils'] = coils
+    df.loc[0, 'locations'] = locations
+    return df.to_json(orient="records")
+
+def log_status(my_full_name, status):
+    df = pd.DataFrame()
+    df.loc[0, 'from'] = my_full_name
+    df.loc[0, 'purpose'] = 'inform'
+    df.loc[0, 'status'] = status
+    return df.to_json(orient="records")
 
 
 
 
-
-
-#funciones Monica
-
+'''funciones Monica'''
 def order_to_search(search_body, agent_full_name, agent_directory):
     agents_df = agents_data()
     agents_df = agents_df.loc[agents_df['Name'] == "browser"]
@@ -894,4 +1004,5 @@ def msg_to_launcher(msg, agent_directory):
     msg_la.body = msg
     msg_la.set_metadata("performative", "inform")
     return msg_la
+
 
