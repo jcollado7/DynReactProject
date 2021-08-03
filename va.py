@@ -9,17 +9,17 @@ import os
 import argparse
 from spade import quit_spade
 import json
+import socket
 
 class VA(Agent):
     class VABehav(PeriodicBehaviour):
         async def run(self):
-            global process_df, va_status_var, my_full_name, va_status_started_at, stop_time, my_dir, wait_msg_time, va_data_df, conf_va_df, auction_df, fab_started_at, leeway, op_times_df, auction_start, va_to_tr_df, coil_msgs_df, medias_list
+            global process_df, va_status_var, my_full_name, va_status_started_at, stop_time, my_dir, wait_msg_time, va_data_df, conf_va_df, auction_df, fab_started_at, leeway, op_times_df, auction_start, va_to_tr_df, coil_msgs_df, medias_list, ip_machine
             auction_start = datetime.datetime.now()
             if va_status_var == "pre-auction":
                 pre_auction_start = datetime.datetime.now()
                 auction_df.at[0, 'pre_auction_start'] = pre_auction_start
                 """inform log of status"""
-                print("ZZ", va_data_df)
                 va_inform_json = asf.inform_log_df(my_full_name, va_status_started_at, va_status_var, va_data_df).to_json(orient="records")
                 #va_inform_json = json.dumps(va_inform)
                 va_msg_log = asf.msg_to_log(va_inform_json, my_dir)
@@ -56,7 +56,6 @@ class VA(Agent):
                         jid_list = closest_coils_df['agent'].tolist()
                         auction_df.at[0, 'number_preauction'] = auction_df.at[0, 'number_preauction'] + 1
                         number = int(auction_df.at[0, 'number_preauction'])
-                        print("JJJ", jid_list)
                         """Inform log """
                         va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'], auction_df.at[0, 'active_coils'])
                         va_msg_log_body = va_msg_log_body.to_json(orient="records")
@@ -270,14 +269,14 @@ class VA(Agent):
         async def on_end(self):
             print({self.counter})
             """Inform log """
-            va_msg_end = asf.send_activation_finish(my_full_name, 'end')
+            va_msg_end = asf.send_activation_finish(my_full_name, ip_machine, 'end')
             va_msg_log = asf.msg_to_log(va_msg_end, my_dir)
             await self.send(va_msg_log)
 
         async def on_start(self):
             self.counter = 1
             """Inform log """
-            va_msg_start = asf.send_activation_finish(my_full_name, 'start')
+            va_msg_start = asf.send_activation_finish(my_full_name, ip_machine, 'start')
             va_msg_log = asf.msg_to_log(va_msg_start, my_dir)
             await self.send(va_msg_log)
 
@@ -318,6 +317,11 @@ if __name__ == "__main__":
     leeway = datetime.timedelta(minutes=int(2))
     op_times_df = pd.DataFrame([], columns=['AVG(ca_op_time)', 'AVG(tr_op_time)'])
     ca_to_tr_df = pd.DataFrame()
+    "IP"
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip_machine = s.getsockname()[0]
+
     """XMPP info"""
     va_jid = asf.agent_jid(my_dir, my_full_name)
     va_passwd = asf.agent_passwd(my_dir, my_full_name)
