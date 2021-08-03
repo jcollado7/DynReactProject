@@ -46,7 +46,13 @@ class LogAgent(Agent):
                         logger.setLevel(logging.CRITICAL)
                     else:
                         print('not valid verbosity')
-                    logger.info(msg.body)
+                    msg_2 = pd.read_json(msg.body)
+                    if msg_2.loc[0, 'purpose'] == 'inform error':
+                        logger.warning(msg.body)
+                    elif msg_2.loc[0, 'purpose'] == 'inform change':
+                        logger.debug(msg.body)
+                    else:
+                        logger.info(msg.body)
                     x = re.search("won auction to process", msg.body)
                     if x:
                         auction = msg.body.split(" ")
@@ -57,7 +63,7 @@ class LogAgent(Agent):
                             asf.update_coil_status(coil_id, status)
                         logger.info(msg.body)
                         print("Coil status updated")
-                    elif msg_sender_jid == "dynrct_r00":
+                    elif msg_sender_jid == "launcher":
                         launcher_df = pd.read_json(msg.body)
                         asf.change_warehouse(launcher_df, my_dir)
                         coils = launcher_df.loc[0,'list_coils']
