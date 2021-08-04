@@ -74,10 +74,10 @@ class LogAgent(Agent):
                         logger.info(msg.body)
                         print("Coil status updated")
                     elif msg_sender_jid == "launcher":
-                        launcher_df = pd.read_json(msg.body)
+                        '''launcher_df = pd.read_json(msg.body)
                         if 'order_code' in launcher_df:
                             asf.change_warehouse(launcher_df, my_dir)
-                            '''coils = launcher_df.loc[0,'list_coils']
+                            coils = launcher_df.loc[0,'list_coils']
                             locations = launcher_df.loc[0, 'list_ware']
                             code = launcher_df.loc[0, 'order_code']
                             order = asf.order_register(my_full_name, code, coils, locations)
