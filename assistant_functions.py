@@ -392,18 +392,18 @@ def my_full_name(agent_name, agent_number):
     return full_name
 
 def set_agent_parameters(agent_directory, agent_name, agent_full_name):
-    agent_data = pd.DataFrame([], columns=['id', 'agent_type','location', 'purpose', 'request_type', 'time', 'activation time', 'int_fab'])
+    agent_data = pd.DataFrame([], columns=['id', 'agent_type','location', 'purpose', 'request_type', 'time', 'activation_time', 'int_fab'])
     agent_data.at[0, 'id'] = agent_full_name
     agent_data.at[0, 'agent_type'] = agent_name
     agents_df = agents_data()
     agents_df = agents_df.loc[agents_df['Name'] == agent_full_name]
     agents_df = agents_df.reset_index(drop=True)
     if agent_name == 'va':
-        agent_data = agent_data.reindex(columns=['id', 'agent_type', 'purpose', 'request_type', 'time', 'activation time', 'setup_speed', 'ancho', 'largo', 'espesor']) #Los valores ya existentes, se mantienen
+        agent_data = agent_data.reindex(columns=['id', 'agent_type', 'purpose', 'request_type', 'time', 'activation_time', 'setup_speed', 'ancho', 'largo', 'espesor']) #Los valores ya existentes, se mantienen
         agent_data = va_parameters(agent_data, agents_df, agent_name)
     elif agent_name == "coil":
         agent_data = agent_data.reindex(
-            columns=['id', 'agent_type', 'location', 'From', 'Code', 'purpose', 'request_type', 'time', 'activation time', 'to_do', 'plant', 'number_auction', 'int_fab', 'bid', 'bid_status', 'ancho', 'largo', 'espesor', 'budget'])
+            columns=['id', 'agent_type', 'location', 'From', 'Code', 'purpose', 'request_type', 'time', 'activation_time', 'to_do', 'plant', 'number_auction', 'int_fab', 'bid', 'bid_status', 'ancho', 'largo', 'espesor', 'budget'])
         agent_data = coil_parameters(agent_data, agents_df, agent_name)
     else: #log,browser..
         agents_df = agents_data()
@@ -493,13 +493,13 @@ def msg_to_log_2(msg_body, agent_directory):
     return msg_log
 
 def activation_df(agent_full_name, status_started_at, df, *args):
-    act_df = df.loc[:, 'id':'activation time']
+    act_df = df.loc[:, 'id':'activation_time']
     act_df = act_df.astype(str)
     act_df.at[0, 'purpose'] = "inform"
     act_df.at[0, 'request_type'] = ""
     act_df.at[0, 'time'] = datetime.datetime.now()
     act_df.at[0, 'status'] = "on"
-    act_df.at[0, 'activation time'] = status_started_at
+    act_df.at[0, 'activation_time'] = status_started_at
     if act_df.at[0, 'id'] == 'browser':
         act_df.drop(['location'], axis=1)
     if args:
@@ -510,7 +510,7 @@ def activation_df(agent_full_name, status_started_at, df, *args):
 
 def inform_log_df(agent_full_name, status_started_at, status, df, *args, **kwargs):
     """Inform of agent status"""
-    inf_df = df.loc[:, 'id':'activation time']
+    inf_df = df.loc[:, 'id':'activation_time']
     inf_df = inf_df.astype(str)
     inf_df.at[0, 'id'] = inf_df.at[0, 'id']
     inf_df.at[0, 'agent_type'] = inf_df.at[0, 'agent_type']
@@ -518,7 +518,7 @@ def inform_log_df(agent_full_name, status_started_at, status, df, *args, **kwarg
     inf_df.at[0, 'request_type'] = ""
     inf_df.at[0, 'time'] = datetime.datetime.now()
     inf_df.at[0, 'status'] = status
-    inf_df.at[0, 'activation time'] = status_started_at
+    inf_df.at[0, 'activation_time'] = status_started_at
     if inf_df.at[0, 'id'] == 'browser':
         inf_df.drop(['location'], axis=1)
     if args:
@@ -620,7 +620,7 @@ def br_get_requested_df(agent_name, *args):
     if args == "coils":
         search_str = '{"id":{"0":"' + "coil" + '_'  # tiene que encontrar todas las coil que quieran fabricarse y como mucho los últimos 1000 registros.
     else:
-        search_str = "activation time"  # takes every record with this. Each agent is sending that info while alive communicating to log.
+        search_str = "activation_time"  # takes every record with this. Each agent is sending that info while alive communicating to log.
     l = []
     N = 1000
     with open(r"log.log") as f:
@@ -704,19 +704,19 @@ def change_warehouse(launcher_df, my_dir):
                 df.loc[df.Name == name, 'location'] = va[j]
                 df.loc[df.Name == name, 'Code'] = z
                 df.to_csv(f'{my_dir}''/''agents.csv', index=False, header=True)
-                cmd = f'python3 coil.py -an {str(number)}'
+                cmd = f'python3 coil.py -an {str(number)} -l {va[j]}'
                 subprocess.Popen(cmd, stdout=None, stdin=None, stderr=None, close_fds=True, shell=True)
                 break
             elif df.loc[df.Name == name, 'Code'].values == z:
                 df.loc[df.Name == name, 'location'] = va[j]
                 df.to_csv(f'{my_dir}''/''agents.csv', index=False, header=True)
-                cmd = f'python3 coil.py -an {str(number)}'
+                cmd = f'python3 coil.py -an {str(number)} -l {va[j]}'
                 subprocess.Popen(cmd, stdout=None, stdin=None, stderr=None, close_fds=True, shell=True)
                 break
             else:
                 number = number + 1
                 name = 'coil_00' + str(number)
-        time.sleep(3)
+        time.sleep(2)
         j = j + 1
 
 def order_file(agent_full_name, order_code, steel_grade, thickness, width_coils, num_coils, list_coils, each_coil_price,
@@ -842,11 +842,12 @@ def send_to_va_msg(my_full_name, bid, to, level):
 def send_activation_finish(my_full_name, ip_machine, level):
     df = pd.DataFrame()
     df.loc[0, 'id'] = my_full_name
-    df.loc[0, 'purpose'] = 'inform change'
+    df.loc[0, 'purpose'] = 'inform'
+    df.loc[0, 'msg'] = 'change status'
     if level == 'start':
-        df.loc[0, 'msg'] = 'agent started'
+        df.loc[0, 'status'] = 'started'
     elif level == 'end':
-        df.loc[0, 'msg'] = 'agent ended'
+        df.loc[0, 'status'] = 'ended'
     df.loc[0, 'IP'] = ip_machine
     return df.to_json(orient="records")
 
@@ -887,11 +888,13 @@ def order_register(my_full_name, code, coils, locations):
     df.loc[0, 'locations'] = locations
     return df.to_json(orient="records")
 
-def log_status(my_full_name, status):
+def log_status(my_full_name, status, ip_machine):
     df = pd.DataFrame()
     df.loc[0, 'id'] = my_full_name
     df.loc[0, 'purpose'] = 'inform'
-    df.loc[0, 'msg'] = status
+    df.loc[0, 'msg'] = 'change status'
+    df.loc[0, 'status'] = status
+    df.loc[0, 'IP'] = ip_machine
     return df.to_json(orient="records")
 
 def coil_status(my_full_name):
@@ -1042,6 +1045,4 @@ def msg_to_launcher(msg, agent_directory):
     msg_la.body = msg
     msg_la.set_metadata("performative", "inform")
     return msg_la
-
-
 
