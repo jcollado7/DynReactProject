@@ -68,13 +68,13 @@ class VA(Agent):
                             row_df = coil_data_df.loc[coil_data_df['Name'] == z]
                             row_df = row_df.reset_index(drop=True)
                             jid_name = row_df.loc[0, 'User name']
-                            print("Message sent to: ", jid_name)
+                            #print("Message sent to: ", jid_name)
                             va_msg_to_coils.to = jid_name
                             await self.send(va_msg_to_coils)
                         """Create a loop to receive all* the messages"""
                         coil_msgs_df = pd.DataFrame()
                         for i in range(len(jid_list)):  # number of messages that enter auction
-                            coil_msg = await self.receive(timeout=7)
+                            coil_msg = await self.receive(timeout=10)
                             if coil_msg:
                                 coil_jid = str(coil_msg.sender)
                                 msg_sender_jid = coil_jid[:-33]
