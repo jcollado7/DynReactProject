@@ -36,7 +36,7 @@ class BrowserAgent(Agent):
                 msg = await self.receive(timeout=wait_msg_time) # wait for a message for 60 seconds
                 if msg:
                     sender = str(msg.sender)
-                    sender_2 = sender[:-31]
+                    sender_2 = sender[:-9]
                     sender = sender[:-33]
                     if sender == 'va':
                         va_data_df = pd.read_json(msg.body)
