@@ -10,6 +10,7 @@ import numpy as np
 import statistics as stats
 from datetime import timedelta,date
 import subprocess
+import time
 
 
 def agents_data():
@@ -402,7 +403,7 @@ def set_agent_parameters(agent_directory, agent_name, agent_full_name):
         agent_data = va_parameters(agent_data, agents_df, agent_name)
     elif agent_name == "coil":
         agent_data = agent_data.reindex(
-            columns=['id', 'agent_type', 'location', 'From', 'Code', 'purpose', 'request_type', 'time', 'activation time', 'to_do', 'number_auction', 'int_fab', 'bid', 'bid_status', 'ancho', 'largo', 'espesor', 'budget'])
+            columns=['id', 'agent_type', 'location', 'From', 'Code', 'purpose', 'request_type', 'time', 'activation time', 'to_do', 'plant', 'number_auction', 'int_fab', 'bid', 'bid_status', 'ancho', 'largo', 'espesor', 'budget'])
         agent_data = coil_parameters(agent_data, agents_df, agent_name)
     else: #log,browser..
         agents_df = agents_data()
@@ -435,6 +436,7 @@ def coil_parameters(agent_data, agents_df, agent_name):
     agent_data.loc[0, 'From'] = agents_df.loc[0, 'From']
     agent_data.loc[0, 'Code'] = agents_df.loc[0, 'Code']
     agent_data.loc[0, 'to_do'] = "search_auction"
+    agent_data.loc[0, 'plant'] = "VA"
     agent_data.at[0, 'ancho'] = 12 + (rn * 10)  # between 12-22
     agent_data.at[0, 'largo'] = 13 + (rn * 10)  # between 13-16
     agent_data.at[0, 'espesor'] = 14 + (rn * 10)  # between 14-17
@@ -520,7 +522,8 @@ def inform_log_df(agent_full_name, status_started_at, status, df, *args, **kwarg
     if inf_df.at[0, 'id'] == 'browser':
         inf_df.drop(['location'], axis=1)
     if args:
-        inf_df.at[0, 'to_do'] = args[0]  # In the case of stand-by coil, it passes to_do = "searching_auction" so that browser can search this coil when a resource looks for processing.
+        inf_df.at[0, 'to_do'] = args[0]
+        inf_df.loc[0, 'plant'] = "VA"
     if kwargs:  # in case did not enter auction
         inf_df.at[0, 'entered_auction'] = kwargs[0]  # "No, temp difference out of limit"
     return inf_df
@@ -643,7 +646,7 @@ def br_get_requested_df(agent_name, *args):
             df = df.append(b)
     df = df.reset_index(drop=True)
     if args == "coils":  # if ca is requesting
-        df = df.loc[0, 'to_do'] == "search_auction" # filters coils searching for auction
+        df = df.loc[0, 'to_do'] == "search_auction"
     return df
 
 def req_active_users_loc_times(agent_df, *args):
@@ -713,6 +716,7 @@ def change_warehouse(launcher_df, my_dir):
             else:
                 number = number + 1
                 name = 'coil_00' + str(number)
+        time.sleep(3)
         j = j + 1
 
 def order_file(agent_full_name, order_code, steel_grade, thickness, width_coils, num_coils, list_coils, each_coil_price,
@@ -741,8 +745,9 @@ def order_code_log(coil_code, my_full_name):
     order_coil_df.at[0, 'Code'] = coil_code
     order_coil_df.loc[0, 'purpose'] = "location_coil"
     order_coil_df.loc[0, 'id'] = my_full_name
-    order_coil_df.loc[0, 'to'] = 'log'
-    order_coil_df.loc[0, 'msg'] = 'seq_2x2'
+    seq_id = order_coil_df.loc[0, 'id']
+    order_coil_df.loc[0, 'to'] = 'log@apiict00.etsii.upm.es'
+    order_coil_df.loc[0, 'msg'] = f'{seq_id}_seq_2x2'
     order_coil_df = order_coil_df[['id', 'Code', 'purpose', 'msg', 'to']]
     return order_coil_df.to_json(orient="records")
 
@@ -754,7 +759,7 @@ def loc_of_coil(coil_df):
     location = location.values
     location = location[0]
     loc_df.loc[0, 'location'] = location
-    return loc_df.to_json()
+    return loc_df
 
 
 
@@ -765,13 +770,14 @@ def loc_of_coil(coil_df):
 
 def request_browser(df):
     df = df.loc[:, 'id':'request_type']
-    df.loc[0, 'to'] = 'browser'
-    df.loc[0, 'msg'] = 'seq_1x1'
+    df.loc[0, 'to'] = 'browser@apiict00.etsii.upm.es'
+    seq_id = df.loc[0,'id']
+    df.loc[0, 'msg'] = f'{seq_id}_seq_1x1'
     df = df[['id', 'purpose', 'request_type', 'msg', 'to']]
     return df
 
 def answer_va(df, sender):
-    df.loc[0, 'msg'] = 'seq_1x1'
+    df.loc[0, 'msg'] = 'browser_seq_1x1'
     df.loc[0, "id"] = 'browser'
     df.loc[0, "purpose"] = 'answer'
     df.loc[0, "to"] = sender
@@ -779,7 +785,7 @@ def answer_va(df, sender):
     return df
 
 def answer_coil(df, sender):
-    df.loc[0, 'msg'] = 'seq_2x2'
+    df.loc[0, 'msg'] = 'browser_seq_2x2'
     df.loc[0, "id"] = 'browser'
     df.loc[0, "purpose"] = 'answer'
     df.loc[0, "to"] = sender
@@ -797,17 +803,27 @@ def send_va(my_full_name, number, auction_level, jid_list):
     elif auction_level == 3:
         df.loc[0, 'msg'] = 'send acceptance'
     df.loc[0, 'number'] = number
-    df.loc[0, 'to'] = [jid_list]
+    df.loc[0, 'to'] = jid_list
     return df
 
 def send_coil(my_full_name):
     df = pd.DataFrame()
     df.loc[0, 'id'] = my_full_name
+    seq_id = df.loc[0, 'id']
     df.loc[0, 'agent_type'] = 'coil'
     df.loc[0, 'purpose'] = 'my location'
-    df.loc[0, 'msg'] = 'seq_2x2'
-    df.loc[0, 'to'] = 'browser'
+    df.loc[0, 'msg'] = f'{seq_id}_seq_2x2'
+    df.loc[0, 'to'] = 'browser@apiict00.etsii.upm.es'
     return df
+
+def send_br_log(df, my_full_name):
+    df.loc[0, 'id'] = my_full_name
+    seq_id = df.loc[0, 'id']
+    df.loc[0, 'purpose'] = 'answer'
+    df.loc[0, 'msg'] = f'{seq_id}_seq_2x2'
+    df.loc[0, 'to'] = 'browser@apiict00.etsii.upm.es'
+    df = df[['id', 'purpose', 'msg', 'location', 'to']]
+    return df.to_json(orient="records")
 
 def send_to_va_msg(my_full_name, bid, to, level):
     df = pd.DataFrame()
@@ -878,6 +894,13 @@ def log_status(my_full_name, status):
     df.loc[0, 'msg'] = status
     return df.to_json(orient="records")
 
+def coil_status(my_full_name, status):
+    df = pd.DataFrame()
+    df.loc[0, 'id'] = my_full_name
+    df.loc[0, 'purpose'] = 'inform'
+    df.loc[0, 'msg'] = 'change status'
+    df.loc[0, 'status'] = 'sleep'
+    return df.to_json(orient="records")
 
 
 
