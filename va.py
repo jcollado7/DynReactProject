@@ -44,59 +44,66 @@ class VA(Agent):
                     msg_sender_jid = msg_sender_jid[:-9]
                     """Send a message to all active coils presenting auction and ideal conditions"""
                     if msg_sender_jid == br_jid:
-                        closest_coils_df = asf.get_coil_list(br_data_df)
-                        auction_df.at[0, 'active_coils'] = [closest_coils_df['agent'].to_list()]  # Save information to auction df
-                        va_data_df.at[0, 'auction_level'] = 1  # initial auction level
-                        va_data_df.at[0, 'bid_status'] = 'bid'
-                        bid_mean = asf.bids_mean(medias_list)
-                        va_data_df.at[0, 'bid_mean'] = float(bid_mean)
-                        va_to_coils_df = asf.va_to_coils_initial_df(va_data_df, conf_va_df)
-                        va_to_coils_json = va_to_coils_df.to_json()  # json to send to coils with auction info including last temperatures
-                        # Create a loop to inform of auctionable resource to willing to be fab coils.
-                        jid_list = closest_coils_df['agent'].tolist()
-                        jid_list_msg = str(jid_list)
-                        auction_df.at[0, 'number_preauction'] = auction_df.at[0, 'number_preauction'] + 1
-                        number = int(auction_df.at[0, 'number_preauction'])
-                        """Inform log """
-                        va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'], jid_list_msg)
-                        va_msg_log_body = va_msg_log_body.to_json(orient="records")
-                        va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
-                        await self.send(va_msg_log)
-                        va_msg_to_coils = asf.va_msg_to(va_to_coils_json)
-                        for z in jid_list:
-                            coil_data_df = pd.read_csv(f'agents.csv', header=0, delimiter=",", engine='python')
-                            row_df = coil_data_df.loc[coil_data_df['Name'] == z]
-                            row_df = row_df.reset_index(drop=True)
-                            jid_name = row_df.loc[0, 'User name']
-                            #print("Message sent to: ", jid_name)
-                            va_msg_to_coils.to = jid_name
-                            await self.send(va_msg_to_coils)
-                        """Create a loop to receive all* the messages"""
-                        coil_msgs_df = pd.DataFrame()
-                        for i in range(len(jid_list)):  # number of messages that enter auction
-                            coil_msg = await self.receive(timeout=10)
-                            if coil_msg:
-                                coil_jid = str(coil_msg.sender)
-                                msg_sender_jid = coil_jid[:-33]
-                                if msg_sender_jid == "c0":
-                                    coil_msg_df = pd.read_json(coil_msg.body)
+                        if not br_data_df.empty:
+                            closest_coils_df = asf.get_coil_list(br_data_df)
+                            auction_df.at[0, 'active_coils'] = [closest_coils_df['agent'].to_list()]  # Save information to auction df
+                            va_data_df.at[0, 'auction_level'] = 1  # initial auction level
+                            va_data_df.at[0, 'bid_status'] = 'bid'
+                            bid_mean = asf.bids_mean(medias_list)
+                            va_data_df.at[0, 'bid_mean'] = float(bid_mean)
+                            va_to_coils_df = asf.va_to_coils_initial_df(va_data_df, conf_va_df)
+                            va_to_coils_json = va_to_coils_df.to_json()  # json to send to coils with auction info including last temperatures
+                            # Create a loop to inform of auctionable resource to willing to be fab coils.
+                            jid_list = closest_coils_df['agent'].tolist()
+                            jid_list_msg = str(jid_list)
+                            auction_df.at[0, 'number_preauction'] = auction_df.at[0, 'number_preauction'] + 1
+                            number = int(auction_df.at[0, 'number_preauction'])
+                            """Inform log """
+                            va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'], jid_list_msg)
+                            va_msg_log_body = va_msg_log_body.to_json(orient="records")
+                            va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
+                            await self.send(va_msg_log)
+                            va_msg_to_coils = asf.va_msg_to(va_to_coils_json)
+                            for z in jid_list:
+                                coil_data_df = pd.read_csv(f'agents.csv', header=0, delimiter=",", engine='python')
+                                row_df = coil_data_df.loc[coil_data_df['Name'] == z]
+                                row_df = row_df.reset_index(drop=True)
+                                jid_name = row_df.loc[0, 'User name']
+                                #print("Message sent to: ", jid_name)
+                                va_msg_to_coils.to = jid_name
+                                await self.send(va_msg_to_coils)
+                            """Create a loop to receive all* the messages"""
+                            coil_msgs_df = pd.DataFrame()
+                            for i in range(len(jid_list)):  # number of messages that enter auction
+                                coil_msg = await self.receive(timeout=10)
+                                if coil_msg:
                                     coil_jid = str(coil_msg.sender)
-                                    msg_sender = coil_jid[:-9]
-                                    coil_msg_df.at[0, 'coil_jid'] = msg_sender
-                                    coil_msgs_df = coil_msgs_df.append(coil_msg_df)  # received msgs
-                                    va_status_var = "auction"
+                                    msg_sender_jid = coil_jid[:-33]
+                                    if msg_sender_jid == "c0":
+                                        coil_msg_df = pd.read_json(coil_msg.body)
+                                        coil_jid = str(coil_msg.sender)
+                                        msg_sender = coil_jid[:-9]
+                                        coil_msg_df.at[0, 'coil_jid'] = msg_sender
+                                        coil_msgs_df = coil_msgs_df.append(coil_msg_df)  # received msgs
+                                        va_status_var = "auction"
+                                    else:
+                                        """inform log of issue"""
+                                        va_msg_log_body = f'{my_full_name} received a msg from {msg_sender_jid} rather than coil'
+                                        va_msg_log_body = asf.inform_error(va_msg_log_body)
+                                        va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
+                                        await self.send(va_msg_log)
                                 else:
-                                    """inform log of issue"""
-                                    va_msg_log_body = f'{my_full_name} received a msg from {msg_sender_jid} rather than coil'
+                                    """Inform log """
+                                    va_msg_log_body = f'{my_full_name} did not receive answer from coil'
                                     va_msg_log_body = asf.inform_error(va_msg_log_body)
                                     va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                                     await self.send(va_msg_log)
-                            else:
-                                """Inform log """
-                                va_msg_log_body = f'{my_full_name} did not receive answer from coil'
-                                va_msg_log_body = asf.inform_error(va_msg_log_body)
-                                va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
-                                await self.send(va_msg_log)
+                        else:
+                            """Inform log """
+                            va_msg_log_body = f'{my_full_name} did not receive answer from browser. Coils not available'
+                            va_msg_log_body = asf.inform_error(va_msg_log_body)
+                            va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
+                            await self.send(va_msg_log)
             if va_status_var == "auction":
                 if not coil_msgs_df.empty:
                     auction_start = datetime.datetime.now()
@@ -338,4 +345,3 @@ if __name__ == "__main__":
         va_status_var = "off"
         va_agent.stop()
         quit_spade()
-        
