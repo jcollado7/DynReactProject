@@ -738,7 +738,7 @@ def order_file(agent_full_name, order_code, steel_grade, thickness, width_coils,
     order_msg_log.at[0, 'string_operations'] = string_operations
     order_msg_log.at[0, 'date'] = date.today().strftime('%Y-%m-%d')
     order_msg_log.at[0, 'to'] = 'log'
-    return order_msg_log.to_json(orient="records")
+    return order_msg_log
 
 def order_code_log(coil_code, my_full_name):
     order_coil_df = pd.DataFrame([], columns = ['Code'])
@@ -1042,7 +1042,6 @@ def msg_to_launcher(msg, agent_directory):
     msg_la.body = msg
     msg_la.set_metadata("performative", "inform")
     return msg_la
-
 
 
 
