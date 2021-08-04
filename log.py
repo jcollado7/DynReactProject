@@ -28,8 +28,15 @@ class LogAgent(Agent):
                     #logger.info(msg.body)
                     msg_sender_jid0 = str(msg.sender)
                     msg_sender_jid = msg_sender_jid0[:-31]
+                    msg_sender_jid1 = msg_sender_jid0[:-33]
+                    if msg_sender_jid1 == 'c0':
+                        msg_sender_jid2 = 'coil'
+                    elif msg_sender_jid1 == 'va':
+                        msg_sender_jid2 = 'va'
+                    else:
+                        msg_sender_jid2 = msg_sender_jid0[:-31]
                     fileh = logging.FileHandler(f'{my_dir}/{my_name}.log')
-                    formatter = logging.Formatter(f'%(asctime)s;%(levelname)s;{msg_sender_jid};%(pathname)s;%(message)s')
+                    formatter = logging.Formatter(f'%(asctime)s;%(levelname)s;{msg_sender_jid2};%(pathname)s;%(message)s')
                     fileh.setFormatter(formatter)
                     log = logging.getLogger()  # root logger
                     for hdlr in log.handlers[:]:  # remove all old handlers
@@ -50,8 +57,10 @@ class LogAgent(Agent):
                     msg_2 = pd.read_json(msg.body)
                     if msg_2.loc[0, 'purpose'] == 'inform error':
                         logger.warning(msg.body)
-                    elif msg_2.loc[0, 'purpose'] == 'inform change':
+                    elif msg_2.loc[0, 'purpose'] == 'inform change' or 'status' in msg_2:
                         logger.debug(msg.body)
+                    elif 'active_coils' in msg_2:
+                        logger.critical(msg.body)
                     else:
                         logger.info(msg.body)
                     x = re.search("won auction to process", msg.body)
@@ -68,11 +77,11 @@ class LogAgent(Agent):
                         launcher_df = pd.read_json(msg.body)
                         if 'order_code' in launcher_df:
                             asf.change_warehouse(launcher_df, my_dir)
-                            coils = launcher_df.loc[0,'list_coils']
+                            '''coils = launcher_df.loc[0,'list_coils']
                             locations = launcher_df.loc[0, 'list_ware']
                             code = launcher_df.loc[0, 'order_code']
                             order = asf.order_register(my_full_name, code, coils, locations)
-                            logger.info(order)
+                            logger.info(order)'''
                     elif msg_sender_jid == "browser":
                         x = re.search("{", msg.body)
                         if x:
@@ -80,8 +89,11 @@ class LogAgent(Agent):
                             if 'purpose' in browser_df.columns:
                                 if browser_df.loc[0, 'purpose'] == "location_coil":
                                     msg = asf.loc_of_coil(browser_df)
-                                    msg_to_br = asf.msg_to_br(msg, my_dir)
+                                    msg_to_json = msg.to_json()
+                                    msg_to_br = asf.msg_to_br(msg_to_json, my_dir)
                                     await self.send(msg_to_br)
+                                    msg_to_log = asf.send_br_log(msg, my_full_name)
+                                    logger.info(msg_to_log)
                 else:
                     msg = f"Log_agent didn't receive any msg in the last {wait_msg_time}s"
                     msg = asf.inform_error(msg)
