@@ -46,6 +46,9 @@ class LaunchAgent(Agent):
 
         async def on_end(self):
             """Inform log """
+            la_msg_ended = asf.send_activation_finish(my_full_name, ip_machine, 'end')
+            la_msg_ended = asf.msg_to_log(la_msg_ended, my_dir)
+            await self.send(la_msg_ended)
             await self.agent.stop()
 
         async def on_start(self):
