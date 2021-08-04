@@ -30,6 +30,7 @@ class CoilAgent(Agent):
                     if msg_sender_jid == "va":
                         """Inform log """
                         va_coil_msg_sender = va_coil_msg.sender
+                        coil_msg_log_sender = str(va_coil_msg.sender)
                         va_coil_msg_df = pd.read_json(va_coil_msg.body)
                         '''Evaluate whether to enter the auction, asking Browser the location'''
                         coil_request_type = "my location"
@@ -45,7 +46,7 @@ class CoilAgent(Agent):
                         i = 0
                         while i < 4:
                             i = i + 1
-                            br_coil_msg_json = await self.receive(timeout=15)
+                            br_coil_msg_json = await self.receive(timeout=20)
                             if br_coil_msg_json:
                                 msg_sender_jid = str(br_coil_msg_json.sender)
                                 msg_sender_jid_0 = msg_sender_jid[:-9]
@@ -63,8 +64,8 @@ class CoilAgent(Agent):
                                         coil_va_msg = asf.msg_to_sender(va_coil_msg)
                                         coil_va_msg.body = coil_df.to_json()
                                         await self.send(coil_va_msg)
-                                        """Inform log """
-                                        coil_msg_log_body = asf.send_to_va_msg(my_full_name, bid, va_coil_msg_sender, '1')
+                                        """Inform log"""
+                                        coil_msg_log_body = asf.send_to_va_msg(my_full_name, bid, coil_msg_log_sender[:-9], '1')
                                         coil_msg_log_body = coil_msg_log_body.to_json(orient="records")
                                         coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                         await self.send(coil_msg_log)
@@ -89,7 +90,7 @@ class CoilAgent(Agent):
                                                         await self.send(coil_va_msg)
                                                         """Inform log """
                                                         coil_msg_log_body = asf.send_to_va_msg(my_full_name, counterbid,
-                                                                                               va_coil_msg_sender, '2')
+                                                                                               coil_msg_log_sender[:-9], '2')
                                                         coil_msg_log_body = coil_msg_log_body.to_json(orient="records")
                                                         coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                                         await self.send(coil_msg_log)
@@ -117,8 +118,7 @@ class CoilAgent(Agent):
                                                                         coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                                                         await self.send(coil_msg_log)
                                                                         coil_status_var = 'sleep'
-                                                                        coil_msg_log_body = f'{my_full_name} changes status to {coil_status_var}.'
-                                                                        coil_msg_log_body = asf.inform_finish(coil_msg_log_body)
+                                                                        coil_msg_log_body = asf.coil_status(my_full_name)
                                                                         coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                                                         await self.send(coil_msg_log)
                                                                         break
@@ -314,6 +314,8 @@ if __name__ == "__main__":
         coil_status_var = "off"
         coil_agent.stop()
         quit_spade()
+
+
 
 
 
