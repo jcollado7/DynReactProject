@@ -894,7 +894,7 @@ def log_status(my_full_name, status):
     df.loc[0, 'msg'] = status
     return df.to_json(orient="records")
 
-def coil_status(my_full_name, status):
+def coil_status(my_full_name):
     df = pd.DataFrame()
     df.loc[0, 'id'] = my_full_name
     df.loc[0, 'purpose'] = 'inform'
