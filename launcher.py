@@ -22,9 +22,11 @@ class LaunchAgent(Agent):
             await self.send(la_msg_log)
             """Send new order to log"""
             if order_code != "No":
-                la_inform_log_json = asf.order_file(my_full_name, order_code, steel_grade, thickness, width_coils,
+                la_inform_log = asf.order_file(my_full_name, order_code, steel_grade, thickness, width_coils,
                                                     num_coils, list_coils, each_coil_price, list_ware, string_operations)
+                la_inform_log_json = la_inform_log.to_json(orient="records")
                 la_order_log = asf.order_to_log(la_inform_log_json, my_dir)
+                asf.change_warehouse(la_inform_log, my_dir)
                 await self.send(la_order_log)
 
             """Send searching code to browser"""
@@ -136,5 +138,3 @@ if __name__ == "__main__":
             la_status_var = "off"
             la_agent.stop()
     quit_spade()
-
-
