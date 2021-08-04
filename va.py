@@ -54,10 +54,11 @@ class VA(Agent):
                         va_to_coils_json = va_to_coils_df.to_json()  # json to send to coils with auction info including last temperatures
                         # Create a loop to inform of auctionable resource to willing to be fab coils.
                         jid_list = closest_coils_df['agent'].tolist()
+                        jid_list_msg = str(jid_list)
                         auction_df.at[0, 'number_preauction'] = auction_df.at[0, 'number_preauction'] + 1
                         number = int(auction_df.at[0, 'number_preauction'])
                         """Inform log """
-                        va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'], auction_df.at[0, 'active_coils'])
+                        va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'], jid_list_msg)
                         va_msg_log_body = va_msg_log_body.to_json(orient="records")
                         va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                         await self.send(va_msg_log)
@@ -103,9 +104,10 @@ class VA(Agent):
                     auction_df.at[0, 'number_auction'] = auction_df.at[0, 'number_auction'] + 1
                     number = int(auction_df.at[0, 'number_auction'])
                     bid_list = coil_msgs_df['id'].tolist()
+                    bid_list_msg = str(bid_list)
                     va_data_df.at[0, 'auction_level'] = 2
                     """Inform log """
-                    va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'], bid_list)
+                    va_msg_log_body = asf.send_va(my_full_name, number, va_data_df.at[0, 'auction_level'], bid_list_msg)
                     va_msg_log_body = va_msg_log_body.to_json(orient="records")
                     va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                     await self.send(va_msg_log)
@@ -336,5 +338,3 @@ if __name__ == "__main__":
         va_status_var = "off"
         va_agent.stop()
         quit_spade()
-
-
