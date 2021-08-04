@@ -188,3 +188,4 @@ if __name__ == "__main__":
         stop_msg_log = json.dumps(stop_msg_log)
         logger.critical(stop_msg_log)
         quit_spade()
+        
