@@ -293,7 +293,6 @@ if __name__ == "__main__":
     location = args.location
     refresh_time = datetime.datetime.now() + datetime.timedelta(seconds=1)
     auction_finish_at = ""
-    print(my_full_name)
     """Save to csv who I am"""
     coil_df = asf.set_agent_parameters(my_dir, my_name, my_full_name)
     coil_df.at[0, 'budget'] = args.budget
