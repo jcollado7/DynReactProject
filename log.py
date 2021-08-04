@@ -19,7 +19,7 @@ import socket
 class LogAgent(Agent):
     class LogBehav(CyclicBehaviour):
         async def run(self):
-            global wait_msg_time, logger, log_status_var
+            global wait_msg_time, logger, log_status_var, ip_machine
             if log_status_var == "on":
                 msg = await self.receive(timeout=wait_msg_time)  # wait for a message for 20 seconds
                 if msg:
@@ -57,7 +57,7 @@ class LogAgent(Agent):
                     msg_2 = pd.read_json(msg.body)
                     if msg_2.loc[0, 'purpose'] == 'inform error':
                         logger.warning(msg.body)
-                    elif msg_2.loc[0, 'purpose'] == 'inform change' or 'status' in msg_2:
+                    elif 'IP' in msg_2:  #msg_2.loc[0, 'purpose'] == 'inform' or
                         logger.debug(msg.body)
                     elif 'active_coils' in msg_2:
                         logger.critical(msg.body)
@@ -74,10 +74,10 @@ class LogAgent(Agent):
                         logger.info(msg.body)
                         print("Coil status updated")
                     elif msg_sender_jid == "launcher":
-                        '''launcher_df = pd.read_json(msg.body)
+                        launcher_df = pd.read_json(msg.body)
                         if 'order_code' in launcher_df:
                             asf.change_warehouse(launcher_df, my_dir)
-                            coils = launcher_df.loc[0,'list_coils']
+                            '''coils = launcher_df.loc[0,'list_coils']
                             locations = launcher_df.loc[0, 'list_ware']
                             code = launcher_df.loc[0, 'order_code']
                             order = asf.order_register(my_full_name, code, coils, locations)
@@ -99,17 +99,17 @@ class LogAgent(Agent):
                     msg = asf.inform_error(msg)
                     logger.debug(msg)
             elif log_status_var == "stand-by":
-                status_log = asf.log_status(my_full_name, log_status_var)
+                status_log = asf.log_status(my_full_name, log_status_var, ip_machine)
                 logger.debug(status_log)
 
                 log_status_var = "on"
-                status_log = asf.log_status(my_full_name, log_status_var)
+                status_log = asf.log_status(my_full_name, log_status_var, ip_machine)
                 logger.debug(status_log)
             else:
-                status_log = asf.log_status(my_full_name, log_status_var)
+                status_log = asf.log_status(my_full_name, log_status_var, ip_machine)
                 logger.debug(status_log)
                 log_status_var = "stand-by"
-                status_log = asf.log_status(my_full_name, log_status_var)
+                status_log = asf.log_status(my_full_name, log_status_var, ip_machine)
                 logger.debug(status_log)
 
         async def on_end(self):
@@ -166,6 +166,10 @@ if __name__ == "__main__":
     wait_msg_time = args.wait_msg_time
     log_status_var = "stand-by"
 
+    "IP"
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip_machine = s.getsockname()[0]
 
     """Logger info"""
     logger = logging.getLogger(__name__)
