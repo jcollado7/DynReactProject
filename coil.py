@@ -281,6 +281,8 @@ if __name__ == "__main__":
     parser.add_argument('-st', '--stop_time', type=int, metavar='', required=False, default=84600, help='stop_time: time in seconds where agent')
     parser.add_argument('-s', '--status', type=str, metavar='', required=False, default='stand-by', help='status_var: on, stand-by, off')
     parser.add_argument('-b', '--budget', type=int, metavar='', required=False, default=200, help='budget: in case of needed, budget can be increased')
+    parser.add_argument('-l', '--location', type=str, metavar='', required=False, default='K',
+                        help='location: K, L, M, N')
     args = parser.parse_args()
     my_dir = os.getcwd()
     my_name = os.path.basename(__file__)[:-3]
@@ -288,8 +290,10 @@ if __name__ == "__main__":
     wait_msg_time = args.wait_msg_time
     coil_started_at = datetime.datetime.now()
     coil_status_var = args.status
+    location = args.location
     refresh_time = datetime.datetime.now() + datetime.timedelta(seconds=1)
     auction_finish_at = ""
+    print(my_full_name)
     """Save to csv who I am"""
     coil_df = asf.set_agent_parameters(my_dir, my_name, my_full_name)
     coil_df.at[0, 'budget'] = args.budget
@@ -314,9 +318,5 @@ if __name__ == "__main__":
         coil_status_var = "off"
         coil_agent.stop()
         quit_spade()
-
-
-
-
 
 
