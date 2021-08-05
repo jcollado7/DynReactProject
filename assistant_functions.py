@@ -93,11 +93,11 @@ def msg_to_br(msg_body, agent_directory):
     msg_br.set_metadata("performative", "inform")
     return msg_br
 
-def get_coil_list(browser_df):
+def get_coil_list(browser_df, list):
     browser_df = browser_df.loc[browser_df['agent_type'] == "coil"]
     browser_df = browser_df.reset_index(drop=True)
     coil_df_nww = pd.DataFrame()
-    for i in ['K', 'L', 'M', 'N']:
+    for i in list:
         row_df = browser_df.loc[browser_df['location'] == i]
         coil_df_nww = coil_df_nww.append(row_df)
     coil_df_nww = coil_df_nww.sort_index()
@@ -391,7 +391,31 @@ def my_full_name(agent_name, agent_number):
         full_name = str(agent_name) + str("_") + decimal + str(agent_number)
     return full_name
 
-def set_agent_parameters(agent_directory, agent_name, agent_full_name):
+def set_agent_parameters_coil(my_dir, agent_name, agent_full_name, location, code):
+    agent_data = pd.DataFrame([], columns=['id', 'agent_type','location', 'purpose', 'request_type', 'time', 'activation_time', 'int_fab'])
+    agent_data.at[0, 'id'] = agent_full_name
+    agent_data.at[0, 'agent_type'] = agent_name
+    agents_df = agents_data()
+    agents_df.loc[agents_df.Name == agent_full_name, 'location'] = location
+    agents_df.loc[agents_df.Name == agent_full_name, 'Code'] = code
+    agents_df.to_csv(f'{my_dir}''/''agents.csv', index=False, header=True)
+    agents_df = agents_df.loc[agents_df['Name'] == agent_full_name]
+    agents_df = agents_df.reset_index(drop=True)
+    if agent_name == 'va':
+        agent_data = agent_data.reindex(columns=['id', 'agent_type', 'purpose', 'request_type', 'time', 'activation_time', 'setup_speed', 'ancho', 'largo', 'espesor']) #Los valores ya existentes, se mantienen
+        agent_data = va_parameters(agent_data, agents_df, agent_name)
+    elif agent_name == "coil":
+        agent_data = agent_data.reindex(
+            columns=['id', 'agent_type', 'location', 'From', 'Code', 'purpose', 'request_type', 'time', 'activation_time', 'to_do', 'plant', 'number_auction', 'int_fab', 'bid', 'bid_status', 'ancho', 'largo', 'espesor', 'budget'])
+        agent_data = coil_parameters(agent_data, agents_df, agent_name)
+    else: #log,browser..
+        agents_df = agents_data()
+        df = agents_df.loc[agents_df['Name'] == agent_name]
+        df = df.reset_index(drop=True)
+        #agent_data.at[0, 'location'] = df.loc[0, 'Location']
+    return agent_data
+
+def set_agent_parameters(my_dir, agent_name, agent_full_name):
     agent_data = pd.DataFrame([], columns=['id', 'agent_type','location', 'purpose', 'request_type', 'time', 'activation_time', 'int_fab'])
     agent_data.at[0, 'id'] = agent_full_name
     agent_data.at[0, 'agent_type'] = agent_name
@@ -410,7 +434,6 @@ def set_agent_parameters(agent_directory, agent_name, agent_full_name):
         df = agents_df.loc[agents_df['Name'] == agent_name]
         df = df.reset_index(drop=True)
         #agent_data.at[0, 'location'] = df.loc[0, 'Location']
-
     return agent_data
 
 def agent_jid(agent_directory, agent_full_name):
@@ -612,6 +635,7 @@ def check_active_users_loc_times(va_data_df, agent_name, *args):
         coil_df = coil_df.append(row_df)
     coil_df = coil_df.sort_index()
     coil_df = coil_df.reset_index(drop=True)
+    coil_df = get_coil_list(coil_df, va_data_df.loc[0, 'list_coils'])
     return coil_df
 
 def br_get_requested_df(agent_name, *args):
@@ -649,13 +673,30 @@ def br_get_requested_df(agent_name, *args):
         df = df.loc[0, 'to_do'] == "search_auction"
     return df
 
-def req_active_users_loc_times(agent_df, *args):
+def req_active_users_loc_times(agent_df, seq, list, *args):
     """Returns msg body to send to browser as a json"""
     va_request_df = agent_df #.loc[:, 'id':'time']
     va_request_df = va_request_df.astype(str)
     va_request_df.at[0, 'purpose'] = "request"
     this_time = datetime.datetime.now()
     va_request_df.at[0, 'time'] = this_time
+    va_request_df.at[0, 'seq'] = seq
+    va_request_df.loc[0, 'list_coils'] = str(list)
+    if args:
+        va_request_df.at[0, 'request_type'] = args[0]
+    else:
+        va_request_df.at[0, 'request_type'] = "active users location & op_time"
+    return va_request_df
+
+def req_active_users_loc_times_coil(agent_df, seq, *args):
+    """Returns msg body to send to browser as a json"""
+    va_request_df = agent_df #.loc[:, 'id':'time']
+    va_request_df = va_request_df.astype(str)
+    va_request_df.at[0, 'purpose'] = "request"
+    this_time = datetime.datetime.now()
+    va_request_df.at[0, 'time'] = this_time
+    va_request_df.at[0, 'seq'] = seq
+    va_request_df.loc[0, 'list_coils'] = str(list)
     if args:
         va_request_df.at[0, 'request_type'] = args[0]
     else:
@@ -701,22 +742,17 @@ def change_warehouse(launcher_df, my_dir):
         name = 'coil_00' + str(number)
         for i in range(11):
             if df.loc[df.Name == name, 'Code'].isnull().any().any():
-                df.loc[df.Name == name, 'location'] = va[j]
-                df.loc[df.Name == name, 'Code'] = z
-                df.to_csv(f'{my_dir}''/''agents.csv', index=False, header=True)
-                cmd = f'python3 coil.py -an {str(number)} -l {va[j]}'
+                cmd = f'python3 coil.py -an {str(number)} -l {va[j]} -c{z}'
                 subprocess.Popen(cmd, stdout=None, stdin=None, stderr=None, close_fds=True, shell=True)
                 break
             elif df.loc[df.Name == name, 'Code'].values == z:
-                df.loc[df.Name == name, 'location'] = va[j]
-                df.to_csv(f'{my_dir}''/''agents.csv', index=False, header=True)
-                cmd = f'python3 coil.py -an {str(number)} -l {va[j]}'
+                cmd = f'python3 coil.py -an {str(number)} -l {va[j]} -c{z}'
                 subprocess.Popen(cmd, stdout=None, stdin=None, stderr=None, close_fds=True, shell=True)
                 break
             else:
                 number = number + 1
                 name = 'coil_00' + str(number)
-        time.sleep(2)
+        time.sleep(3)
         j = j + 1
 
 def order_file(agent_full_name, order_code, steel_grade, thickness, width_coils, num_coils, list_coils, each_coil_price,
@@ -740,16 +776,15 @@ def order_file(agent_full_name, order_code, steel_grade, thickness, width_coils,
     order_msg_log.at[0, 'to'] = 'log'
     return order_msg_log
 
-def order_code_log(coil_code, my_full_name):
+def order_code_log(coil_code, df, my_full_name):
     order_coil_df = pd.DataFrame([], columns = ['Code'])
     order_coil_df.at[0, 'Code'] = coil_code
     order_coil_df.loc[0, 'purpose'] = "location_coil"
     order_coil_df.loc[0, 'id'] = my_full_name
-    seq_id = order_coil_df.loc[0, 'id']
     order_coil_df.loc[0, 'to'] = 'log@apiict00.etsii.upm.es'
-    order_coil_df.loc[0, 'msg'] = f'{seq_id}_seq_2x2'
+    order_coil_df.loc[0, 'msg'] = df.loc[0, 'seq']
     order_coil_df = order_coil_df[['id', 'Code', 'purpose', 'msg', 'to']]
-    return order_coil_df.to_json(orient="records")
+    return order_coil_df
 
 def loc_of_coil(coil_df):
     loc_df = pd.DataFrame([], columns = ['location'])
@@ -768,24 +803,25 @@ def loc_of_coil(coil_df):
 
 '''Functions to improve readability in messages. Improve functions'''
 
-def request_browser(df):
+def request_browser(df, seq, list):
     df = df.loc[:, 'id':'request_type']
     df.loc[0, 'to'] = 'browser@apiict00.etsii.upm.es'
-    seq_id = df.loc[0,'id']
-    df.loc[0, 'msg'] = f'{seq_id}_seq_1x1'
+    df.loc[0, 'msg'] = seq
+    df.loc[0, 'coils'] = str(list)
     df = df[['id', 'purpose', 'request_type', 'msg', 'to']]
     return df
 
-def answer_va(df, sender):
-    df.loc[0, 'msg'] = 'browser_seq_1x1'
+def answer_va(df, sender, df_va, coils):
+    df.loc[0, 'msg'] = df_va.loc[0, 'seq']
     df.loc[0, "id"] = 'browser'
+    df.loc[0, "coils"] = coils
     df.loc[0, "purpose"] = 'answer'
     df.loc[0, "to"] = sender
-    df = df[['id', 'purpose', 'msg', 'location', 'to']]
+    df = df[['id', 'purpose', 'msg', 'coils', 'to']]
     return df
 
-def answer_coil(df, sender):
-    df.loc[0, 'msg'] = 'browser_seq_2x2'
+def answer_coil(df, sender, seq_df):
+    df.loc[0, 'msg'] = seq_df.loc[0, 'msg']
     df.loc[0, "id"] = 'browser'
     df.loc[0, "purpose"] = 'answer'
     df.loc[0, "to"] = sender
@@ -806,21 +842,20 @@ def send_va(my_full_name, number, auction_level, jid_list):
     df.loc[0, 'to'] = jid_list
     return df
 
-def send_coil(my_full_name):
+def send_coil(my_full_name, seq):
     df = pd.DataFrame()
     df.loc[0, 'id'] = my_full_name
-    seq_id = df.loc[0, 'id']
     df.loc[0, 'agent_type'] = 'coil'
-    df.loc[0, 'purpose'] = 'my location'
-    df.loc[0, 'msg'] = f'{seq_id}_seq_2x2'
+    df.loc[0, 'purpose'] = 'request'
+    df.loc[0, 'request_type'] = 'my location'
+    df.loc[0, 'msg'] = seq
     df.loc[0, 'to'] = 'browser@apiict00.etsii.upm.es'
     return df
 
-def send_br_log(df, my_full_name):
+def send_br_log(df, df_br, my_full_name):
     df.loc[0, 'id'] = my_full_name
-    seq_id = df.loc[0, 'id']
     df.loc[0, 'purpose'] = 'answer'
-    df.loc[0, 'msg'] = f'{seq_id}_seq_2x2'
+    df.loc[0, 'msg'] = df_br.loc[0, 'msg']
     df.loc[0, 'to'] = 'browser@apiict00.etsii.upm.es'
     df = df[['id', 'purpose', 'msg', 'location', 'to']]
     return df.to_json(orient="records")
@@ -1045,4 +1080,3 @@ def msg_to_launcher(msg, agent_directory):
     msg_la.body = msg
     msg_la.set_metadata("performative", "inform")
     return msg_la
-
