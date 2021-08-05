@@ -595,7 +595,7 @@ def check_active_users_loc_times(va_data_df, agent_name, *args):
     op_times_df.at[0, 'AVG(va_op_time)'] = va_avg'''
     # Check active users locations
     sorted_df = df.sort_values(by=['time'])
-    sorted_df = sorted_df.loc[sorted_df['status'] == "on"]
+    sorted_df = sorted_df.loc[sorted_df['status'] == "auction"]
     active_time = datetime.datetime.now() - datetime.timedelta(seconds=300)
     sorted_df = sorted_df.loc[sorted_df['time'] < active_time]
     uniques = sorted_df['id']
@@ -813,13 +813,15 @@ def request_browser(df, seq, list):
     df = df[['id', 'purpose', 'request_type', 'msg', 'to']]
     return df
 
-def answer_va(df, sender, df_va, coils):
+def answer_va(df_br, sender, df_va, coils, location):
+    df = pd.DataFrame()
     df.loc[0, 'msg'] = df_va.loc[0, 'seq']
     df.loc[0, "id"] = 'browser'
     df.loc[0, "coils"] = coils
+    df.loc[0, "location"] = location
     df.loc[0, "purpose"] = 'answer'
     df.loc[0, "to"] = sender
-    df = df[['id', 'purpose', 'msg', 'coils', 'to']]
+    df = df[['id', 'purpose', 'msg', 'coils', 'location', 'to']]
     return df
 
 def answer_coil(df, sender, seq_df):
