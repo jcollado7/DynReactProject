@@ -127,6 +127,7 @@ class VA(Agent):
                     result = asf.result(bid_coil, jid_list)
                     for i in jid_list:
                         """Ask for extra bid"""
+                        time.sleep(0.5)
                         va_data_df.at[0, 'bid_status'] = 'extrabid'
                         va_coil_extra_msg = asf.va_msg_to(bid_coil.to_json())
                         va_coil_extra_msg.to = i
@@ -134,7 +135,7 @@ class VA(Agent):
                     """Create a loop to receive all the messages"""
                     coil_msgs_df_2 = pd.DataFrame()
                     for i in range(len(jid_list)):
-                        coil_msg = await self.receive(timeout=10)
+                        coil_msg = await self.receive(timeout=12)
                         if coil_msg:
                             coil_jid = str(coil_msg.sender)
                             msg_sender_jid = coil_jid[:-33]
@@ -348,4 +349,3 @@ if __name__ == "__main__":
         va_status_var = "off"
         va_agent.stop()
         quit_spade()
-        
