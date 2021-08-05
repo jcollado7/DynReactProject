@@ -15,7 +15,7 @@ import socket
 class CoilAgent(Agent):
     class CoilBehav(PeriodicBehaviour):
         async def run(self):
-            global my_full_name, my_dir, wait_msg_time, coil_status_var, coil_started_at, stop_time, refresh_time, coil_agent, coil_df, bid_register_df, number_auction, auction_finish_at, ip_machine
+            global my_full_name, my_dir, wait_msg_time, coil_status_var, coil_started_at, stop_time, refresh_time, coil_agent, coil_df, bid_register_df, number_auction, auction_finish_at, ip_machine, seq_coil
             if coil_status_var == "auction":
                 """inform log of status"""
                 to_do = "search_auction"
@@ -25,6 +25,7 @@ class CoilAgent(Agent):
                 # it will wait here for va's that are auctionable.
                 va_coil_msg = await self.receive(timeout=wait_msg_time)
                 if va_coil_msg:
+                    seq_coil = seq_coil + 1
                     msg_sender_jid = str(va_coil_msg.sender)
                     msg_sender_jid = msg_sender_jid[:-33]
                     if msg_sender_jid == "va":
@@ -34,12 +35,12 @@ class CoilAgent(Agent):
                         va_coil_msg_df = pd.read_json(va_coil_msg.body)
                         '''Evaluate whether to enter the auction, asking Browser the location'''
                         coil_request_type = "my location"
-                        coil_msg_br_body = asf.req_active_users_loc_times(coil_df, coil_request_type).to_json()  # returns a json with request info to browser
+                        coil_msg_br_body = asf.req_active_users_loc_times_coil(coil_df, seq_coil, coil_request_type).to_json()  # returns a json with request info to browser
                         coil_msg_br = asf.msg_to_br(coil_msg_br_body, my_dir)
                         # returns a msg object with request info to browser and message setup
                         await self.send(coil_msg_br)
                         """Inform log """
-                        coil_msg_log_body = asf.send_coil(my_full_name)
+                        coil_msg_log_body = asf.send_coil(my_full_name, seq_coil)
                         coil_msg_log_body = coil_msg_log_body.to_json(orient="records")
                         coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                         await self.send(coil_msg_log)
@@ -195,7 +196,7 @@ class CoilAgent(Agent):
                         await self.send(coil_msg_log)
                 else:
                     """inform log"""
-                    coil_msg_log_body = f'{my_full_name} did not receive any msg in the last 20s at {coil_status_var}'
+                    coil_msg_log_body = f'{my_full_name} did not receive any msg in the last {wait_msg_time}s at {coil_status_var}'
                     coil_msg_log_body = asf.inform_error(coil_msg_log_body)
                     coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                     await self.send(coil_msg_log)
@@ -282,7 +283,9 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--status', type=str, metavar='', required=False, default='stand-by', help='status_var: on, stand-by, off')
     parser.add_argument('-b', '--budget', type=int, metavar='', required=False, default=200, help='budget: in case of needed, budget can be increased')
     parser.add_argument('-l', '--location', type=str, metavar='', required=False, default='K',
-                        help='location: K, L, M, N')
+                        help='location: K')
+    parser.add_argument('-c', '--code', type=str, metavar='', required=False, default='cO202106101',
+                        help='code: cO202106101')
     args = parser.parse_args()
     my_dir = os.getcwd()
     my_name = os.path.basename(__file__)[:-3]
@@ -291,14 +294,16 @@ if __name__ == "__main__":
     coil_started_at = datetime.datetime.now()
     coil_status_var = args.status
     location = args.location
+    code = args.code
     refresh_time = datetime.datetime.now() + datetime.timedelta(seconds=1)
     auction_finish_at = ""
     """Save to csv who I am"""
-    coil_df = asf.set_agent_parameters(my_dir, my_name, my_full_name)
+    coil_df = asf.set_agent_parameters_coil(my_dir, my_name, my_full_name, location, code)
     coil_df.at[0, 'budget'] = args.budget
     budget = coil_df.loc[0, 'budget']
     bid_register_df = asf.bid_register(my_name, my_full_name)
     number_auction = int(0)
+    seq_coil = 200
     "IP"
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
