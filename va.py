@@ -73,6 +73,7 @@ class VA(Agent):
                                 #print("Message sent to: ", jid_name)
                                 va_msg_to_coils.to = jid_name
                                 await self.send(va_msg_to_coils)
+                                time.sleep(0.5)
                             """Create a loop to receive all* the messages"""
                             coil_msgs_df = pd.DataFrame()
                             for i in range(len(jid_list)):  # number of messages that enter auction
