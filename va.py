@@ -327,7 +327,7 @@ if __name__ == "__main__":
     leeway = datetime.timedelta(minutes=int(2))
     op_times_df = pd.DataFrame([], columns=['AVG(ca_op_time)', 'AVG(tr_op_time)'])
     ca_to_tr_df = pd.DataFrame()
-    seq_va = 100
+    seq_va = int(100)
     list_coils = ['K', 'L', 'M', 'N']
     "IP"
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
