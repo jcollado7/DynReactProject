@@ -323,5 +323,3 @@ if __name__ == "__main__":
         coil_agent.stop()
         quit_spade()
 
-
-
