@@ -14,9 +14,10 @@ import socket
 class VA(Agent):
     class VABehav(PeriodicBehaviour):
         async def run(self):
-            global process_df, va_status_var, my_full_name, va_status_started_at, stop_time, my_dir, wait_msg_time, va_data_df, conf_va_df, auction_df, fab_started_at, leeway, op_times_df, auction_start, va_to_tr_df, coil_msgs_df, medias_list, ip_machine
+            global process_df, va_status_var, my_full_name, va_status_started_at, stop_time, my_dir, wait_msg_time, va_data_df, conf_va_df, auction_df, fab_started_at, leeway, op_times_df, auction_start, va_to_tr_df, coil_msgs_df, medias_list, ip_machine, seq_va, list_coils
             auction_start = datetime.datetime.now()
             if va_status_var == "pre-auction":
+                seq_va = seq_va + 1
                 pre_auction_start = datetime.datetime.now()
                 auction_df.at[0, 'pre_auction_start'] = pre_auction_start
                 """inform log of status"""
@@ -27,13 +28,13 @@ class VA(Agent):
                 """Asks browser for active coils and locations"""
                 #  Builds msg to br
                 va_request_type = "coils"
-                va_msg_br_body = asf.req_active_users_loc_times(va_data_df, va_request_type)
+                va_msg_br_body = asf.req_active_users_loc_times(va_data_df, seq_va, list_coils, va_request_type)
                 va_msg_br_body_json = va_msg_br_body.to_json() #returns a json with request info to browser
                 va_msg_br = asf.msg_to_br(va_msg_br_body_json, my_dir)
                 # returns a msg object with request info to browser and message setup
                 await self.send(va_msg_br)
                 """Inform log """
-                va_req_br = asf.request_browser(va_msg_br_body).to_json(orient="records")
+                va_req_br = asf.request_browser(va_msg_br_body, seq_va, list_coils).to_json(orient="records")
                 va_req_br = asf.msg_to_log(va_req_br, my_dir)
                 await self.send(va_req_br)
                 br_msg = await self.receive(timeout=20)
@@ -45,8 +46,8 @@ class VA(Agent):
                     """Send a message to all active coils presenting auction and ideal conditions"""
                     if msg_sender_jid == br_jid:
                         if not br_data_df.empty:
-                            closest_coils_df = asf.get_coil_list(br_data_df)
-                            auction_df.at[0, 'active_coils'] = [closest_coils_df['agent'].to_list()]  # Save information to auction df
+                            #closest_coils_df = asf.get_coil_list(br_data_df)
+                            auction_df.at[0, 'active_coils'] = [str(br_data_df['agent'].to_list())]  # Save information to auction df
                             va_data_df.at[0, 'auction_level'] = 1  # initial auction level
                             va_data_df.at[0, 'bid_status'] = 'bid'
                             bid_mean = asf.bids_mean(medias_list)
@@ -54,7 +55,7 @@ class VA(Agent):
                             va_to_coils_df = asf.va_to_coils_initial_df(va_data_df, conf_va_df)
                             va_to_coils_json = va_to_coils_df.to_json()  # json to send to coils with auction info including last temperatures
                             # Create a loop to inform of auctionable resource to willing to be fab coils.
-                            jid_list = closest_coils_df['agent'].tolist()
+                            jid_list = br_data_df['agent'].tolist()
                             jid_list_msg = str(jid_list)
                             auction_df.at[0, 'number_preauction'] = auction_df.at[0, 'number_preauction'] + 1
                             number = int(auction_df.at[0, 'number_preauction'])
@@ -119,7 +120,7 @@ class VA(Agent):
                     va_msg_log = asf.msg_to_log(va_msg_log_body, my_dir)
                     await self.send(va_msg_log)
                     coil_msgs_df = coil_msgs_df.reset_index(drop=True)
-                    auction_df.at[0, 'auction_coils'] = [coil_msgs_df['id'].to_list()]  # Send info to log
+                    auction_df.at[0, 'auction_coils'] = [str(coil_msgs_df['id'].to_list())]  # Send info to log
                     bid_coil = asf.bid_evaluation(coil_msgs_df, va_data_df)
                     bid_coil['bid_status'] = 'extrabid'
                     jid_list = bid_coil['coil_jid'].tolist()
@@ -278,9 +279,9 @@ class VA(Agent):
         async def on_end(self):
             print({self.counter})
             """Inform log """
-            va_msg_end = asf.send_activation_finish(my_full_name, ip_machine, 'end')
+            '''va_msg_end = asf.send_activation_finish(my_full_name, ip_machine, 'end')
             va_msg_log = asf.msg_to_log(va_msg_end, my_dir)
-            await self.send(va_msg_log)
+            await self.send(va_msg_log)'''
 
         async def on_start(self):
             self.counter = 1
@@ -326,6 +327,8 @@ if __name__ == "__main__":
     leeway = datetime.timedelta(minutes=int(2))
     op_times_df = pd.DataFrame([], columns=['AVG(ca_op_time)', 'AVG(tr_op_time)'])
     ca_to_tr_df = pd.DataFrame()
+    seq_va = 100
+    list_coils = ['K', 'L', 'M', 'N']
     "IP"
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
