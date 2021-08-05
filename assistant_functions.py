@@ -734,6 +734,7 @@ def msg_to_browser(order_body, agent_directory):
 def change_warehouse(launcher_df, my_dir):
     va = launcher_df.loc[0, 'list_ware'].split(',')
     lc = launcher_df.loc[0, 'list_coils'].split(',')
+    wait_time = launcher_df.loc[0, 'wait_time']
     df = pd.read_csv('agents.csv', header=0, delimiter=",", engine='python')
     j = 0
     my_dir = os.getcwd()
@@ -742,11 +743,11 @@ def change_warehouse(launcher_df, my_dir):
         name = 'coil_00' + str(number)
         for i in range(11):
             if df.loc[df.Name == name, 'Code'].isnull().any().any():
-                cmd = f'python3 coil.py -an {str(number)} -l {va[j]} -c{z}'
+                cmd = f'python3 coil.py -an {str(number)} -l {va[j]} -c{z} -w{wait_time}'
                 subprocess.Popen(cmd, stdout=None, stdin=None, stderr=None, close_fds=True, shell=True)
                 break
             elif df.loc[df.Name == name, 'Code'].values == z:
-                cmd = f'python3 coil.py -an {str(number)} -l {va[j]} -c{z}'
+                cmd = f'python3 coil.py -an {str(number)} -l {va[j]} -c{z} -w{wait_time}'
                 subprocess.Popen(cmd, stdout=None, stdin=None, stderr=None, close_fds=True, shell=True)
                 break
             else:
@@ -756,7 +757,7 @@ def change_warehouse(launcher_df, my_dir):
         j = j + 1
 
 def order_file(agent_full_name, order_code, steel_grade, thickness, width_coils, num_coils, list_coils, each_coil_price,
-               list_ware, string_operations):
+               list_ware, string_operations, wait_time):
     order_msg_log = pd.DataFrame([], columns=['id', 'order_code', 'steel_grade', 'thickness_coils', 'width_coils',
                                               'num_coils', 'list_coils', 'each_coil_price', 'string_operations',
                                               'date'])
@@ -774,6 +775,7 @@ def order_file(agent_full_name, order_code, steel_grade, thickness, width_coils,
     order_msg_log.at[0, 'string_operations'] = string_operations
     order_msg_log.at[0, 'date'] = date.today().strftime('%Y-%m-%d')
     order_msg_log.at[0, 'to'] = 'log'
+    order_msg_log.at[0, 'wait_time'] = wait_time
     return order_msg_log
 
 def order_code_log(coil_code, df, my_full_name):
