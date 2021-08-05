@@ -57,7 +57,7 @@ class LogAgent(Agent):
                     msg_2 = pd.read_json(msg.body)
                     if msg_2.loc[0, 'purpose'] == 'inform error':
                         logger.warning(msg.body)
-                    elif 'IP' in msg_2:  #msg_2.loc[0, 'purpose'] == 'inform' or
+                    elif 'IP' in msg_2: #msg_2.loc[0, 'purpose'] == 'inform' or
                         logger.debug(msg.body)
                     elif 'active_coils' in msg_2:
                         logger.critical(msg.body)
@@ -92,7 +92,7 @@ class LogAgent(Agent):
                                     msg_to_json = msg.to_json()
                                     msg_to_br = asf.msg_to_br(msg_to_json, my_dir)
                                     await self.send(msg_to_br)
-                                    msg_to_log = asf.send_br_log(msg, my_full_name)
+                                    msg_to_log = asf.send_br_log(msg, browser_df, my_full_name)
                                     logger.info(msg_to_log)
                 else:
                     msg = f"Log_agent didn't receive any msg in the last {wait_msg_time}s"
@@ -192,4 +192,3 @@ if __name__ == "__main__":
         stop_msg_log = json.dumps(stop_msg_log)
         logger.critical(stop_msg_log)
         quit_spade()
-        
