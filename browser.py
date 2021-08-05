@@ -67,7 +67,8 @@ class BrowserAgent(Agent):
                                 await self.send(br_msg_va)
                                 """Inform log of performed request"""
                                 coils = br_msg_va_body['agent'].to_list()
-                                br_msg_va_body = asf.answer_va(br_msg_va_body, sender_2, va_data_df, str(coils))
+                                locations = br_msg_va_body['location'].to_list()
+                                br_msg_va_body = asf.answer_va(br_msg_va_body, sender_2, va_data_df, str(coils), str(locations))
                                 br_msg_va_body = br_msg_va_body.to_json(orient="records")
                                 br_msg_log = asf.msg_to_log(br_msg_va_body, my_dir)
                                 await self.send(br_msg_log)
