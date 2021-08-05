@@ -23,10 +23,8 @@ class LaunchAgent(Agent):
             """Send new order to log"""
             if order_code != "No":
                 la_inform_log_json = asf.order_file(my_full_name, order_code, steel_grade, thickness, width_coils,
-                                                    num_coils, list_coils, each_coil_price, list_ware, string_operations).to_json(orient="records")
-                #la_inform_log_json = la_inform_log.to_json(orient="records")
+                                                    num_coils, list_coils, each_coil_price, list_ware, string_operations, wait_msg_time).to_json(orient="records")
                 la_order_log = asf.order_to_log(la_inform_log_json, my_dir)
-                #asf.change_warehouse(la_inform_log, my_dir)
                 await self.send(la_order_log)
 
             """Send searching code to browser"""
@@ -72,7 +70,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='wh parser')
     parser.add_argument('-an', '--agent_number', type=int, metavar='', required=False, default=1,
                         help='agent_number: 1,2,3,4..')
-    parser.add_argument('-w', '--wait_msg_time', type=int, metavar='', required=False, default=10,
+    parser.add_argument('-w', '--wait_msg_time', type=int, metavar='', required=False, default=20,
                         help='wait_msg_time: time in seconds to wait for a msg')
     parser.add_argument('-st', '--stop_time', type=int, metavar='', required=False, default=10,
                         help='stop_time: time in seconds where agent')
@@ -138,5 +136,3 @@ if __name__ == "__main__":
             la_status_var = "off"
             la_agent.stop()
     quit_spade()
-
-    
