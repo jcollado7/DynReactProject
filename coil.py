@@ -47,7 +47,7 @@ class CoilAgent(Agent):
                         i = 0
                         while i < 4:
                             i = i + 1
-                            br_coil_msg_json = await self.receive(timeout=20)
+                            br_coil_msg_json = await self.receive(timeout=wait_msg_time)
                             if br_coil_msg_json:
                                 msg_sender_jid = str(br_coil_msg_json.sender)
                                 msg_sender_jid_0 = msg_sender_jid[:-9]
@@ -96,7 +96,7 @@ class CoilAgent(Agent):
                                                         coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                                         await self.send(coil_msg_log)
                                                         """Wait to receive acceptance"""
-                                                        va_coil_msg3 = await self.receive(timeout=20)
+                                                        va_coil_msg3 = await self.receive(timeout=wait_msg_time)
                                                         if va_coil_msg3:
                                                             va_coil_msg_df = pd.read_json(va_coil_msg3.body)
                                                             if va_coil_msg3.sender == va_coil_msg_sender:  # checks if communication comes from last sender
@@ -178,19 +178,19 @@ class CoilAgent(Agent):
                                         await self.send(coil_msg_log)
                                 else:
                                     """inform log"""
-                                    coil_msg_log_body = f'{my_full_name} did not receive any msg from Browser Agent in the last 20s at {coil_status_var}'
+                                    coil_msg_log_body = f'{my_full_name} did not receive any msg from Browser Agent in the last {wait_msg_time}s at {coil_status_var}'
                                     coil_msg_log_body = asf.inform_error(coil_msg_log_body)
                                     coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                     await self.send(coil_msg_log)
                             else:
                                 """inform log"""
-                                coil_msg_log_body = f'{my_full_name} did not receive any msg in the last 20s at {coil_status_var}'
+                                coil_msg_log_body = f'{my_full_name} did not receive any msg in the last {wait_msg_time}s at {coil_status_var}'
                                 coil_msg_log_body = asf.inform_error(coil_msg_log_body)
                                 coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                 await self.send(coil_msg_log)
                     else:
                         """inform log"""
-                        coil_msg_log_body = f'{my_full_name} did not receive any msg from VA Agent in the last 20s at {coil_status_var}'
+                        coil_msg_log_body = f'{my_full_name} did not receive any msg from VA Agent in the last {wait_msg_time}s at {coil_status_var}'
                         coil_msg_log_body = asf.inform_error(coil_msg_log_body)
                         coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                         await self.send(coil_msg_log)
@@ -322,5 +322,6 @@ if __name__ == "__main__":
         coil_status_var = "off"
         coil_agent.stop()
         quit_spade()
+
 
 
