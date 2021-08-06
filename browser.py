@@ -94,7 +94,7 @@ class BrowserAgent(Agent):
                             if coil_data_df.loc[0, 'request_type'] == "my location":
                                 coil_code = coil_data_df.loc[0, 'Code']
                                 msg_to_log = asf.order_code_log(coil_code, coil_data_df, my_full_name)
-                                msg_to_log_json= msg_to_log.to_json(orient="records")
+                                msg_to_log_json = msg_to_log.to_json(orient="records")
                                 br_loc_log = asf.msg_to_log(msg_to_log_json, my_dir)
                                 await self.send(br_loc_log)
                                 i = 0
