@@ -55,7 +55,7 @@ class VA(Agent):
                             va_to_coils_df = asf.va_to_coils_initial_df(va_data_df, conf_va_df)
                             va_to_coils_json = va_to_coils_df.to_json()  # json to send to coils with auction info including last temperatures
                             # Create a loop to inform of auctionable resource to willing to be fab coils.
-                            jid_list = br_data_df['agent'].tolist()
+                            jid_list = br_data_df.loc[:, 'agent'].tolist()
                             jid_list_msg = str(jid_list)
                             auction_df.at[0, 'number_preauction'] = auction_df.at[0, 'number_preauction'] + 1
                             number = int(auction_df.at[0, 'number_preauction'])
@@ -112,7 +112,7 @@ class VA(Agent):
                     auction_df.at[0, 'auction_start'] = auction_start
                     auction_df.at[0, 'number_auction'] = auction_df.at[0, 'number_auction'] + 1
                     number = int(auction_df.at[0, 'number_auction'])
-                    bid_list = coil_msgs_df['id'].tolist()
+                    bid_list = coil_msgs_df.loc[:, 'id'].tolist()
                     bid_list_msg = str(bid_list)
                     va_data_df.at[0, 'auction_level'] = 2
                     """Inform log """
@@ -124,7 +124,7 @@ class VA(Agent):
                     auction_df.at[0, 'auction_coils'] = [str(coil_msgs_df['id'].to_list())]  # Send info to log
                     bid_coil = asf.bid_evaluation(coil_msgs_df, va_data_df)
                     bid_coil['bid_status'] = 'extrabid'
-                    jid_list = bid_coil['coil_jid'].tolist()
+                    jid_list = bid_coil.loc[:, 'coil_jid'].tolist()
                     result = asf.result(bid_coil, jid_list)
                     for i in jid_list:
                         """Ask for extra bid"""
@@ -163,7 +163,7 @@ class VA(Agent):
                         va_data_df.loc[0, 'auction_level'] = 3  # third level
                         counterbid_coil = asf.counterbid_evaluation(coil_msgs_df_2, va_data_df)
                         """Inform coil of assignation and agree on assignation"""
-                        jid_list = counterbid_coil['coil_jid'].tolist()
+                        jid_list = counterbid_coil.loc[:, 'coil_jid'].tolist()
                         results_2 = asf.results_2(counterbid_coil, jid_list)
                         for i in range(len(jid_list)):
                             coil_jid_winner_f = counterbid_coil.loc[i, 'coil_jid']
