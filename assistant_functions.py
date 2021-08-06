@@ -735,7 +735,6 @@ def change_warehouse(launcher_df, my_dir):
     va = launcher_df.loc[0, 'list_ware'].split(',')
     lc = launcher_df.loc[0, 'list_coils'].split(',')
     wait_time = launcher_df.loc[0, 'wait_time']
-    #df = pd.read_csv('agents.csv', header=0, delimiter=",", engine='python')
     j = 0
     my_dir = os.getcwd()
     for z in lc:
