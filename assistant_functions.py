@@ -147,7 +147,7 @@ def bid_evaluation(coil_msgs_df, va_data_df):
         coil_msgs_df.at[i, 'production_cost'] = production_cost(va_data_df, coil_msgs_df, i)
     coil_msgs_df = coil_msgs_df.loc[:, ['From', 'id', 'agent_type', 'coil_jid', 'location', 'bid', 'production_cost', 'ancho', 'largo', 'espesor', 'ship_date', 'budget_remaining']]
     coil_msgs_df = coil_msgs_df.reset_index(drop=True)
-    coil_msgs_df = coil_msgs_df.merge(transport_cost_df, on='From')
+    coil_msgs_df = coil_msgs_df.merge(transport_cost_df, on='From', sort=False)
     for i in range(coil_msgs_df.shape[0]):
         m = coil_msgs_df.loc[i, 'production_cost']
         n = coil_msgs_df.loc[i, 'transport_cost']
@@ -178,7 +178,7 @@ def counterbid_evaluation(coil_msgs_df, va_data_df):
         coil_msgs_df.at[i, 'production_cost'] = production_cost(va_data_df, coil_msgs_df, i)
     coil_msgs_df = coil_msgs_df.loc[:, ['From', 'id', 'agent_type', 'coil_jid', 'location', 'counterbid', 'bid', 'production_cost', 'User_name_va', 'ancho', 'largo', 'espesor', 'budget_remaining', 'ship_date']]
     coil_msgs_df = coil_msgs_df.reset_index(drop=True)
-    coil_msgs_df = coil_msgs_df.merge(transport_cost_df, on='From')
+    coil_msgs_df = coil_msgs_df.merge(transport_cost_df, on='From', sort=False)
     for i in range(coil_msgs_df.shape[0]):
         m = coil_msgs_df.loc[i, 'production_cost']
         n = coil_msgs_df.loc[i, 'transport_cost']
@@ -735,12 +735,13 @@ def change_warehouse(launcher_df, my_dir):
     va = launcher_df.loc[0, 'list_ware'].split(',')
     lc = launcher_df.loc[0, 'list_coils'].split(',')
     wait_time = launcher_df.loc[0, 'wait_time']
-    df = pd.read_csv('agents.csv', header=0, delimiter=",", engine='python')
+    #df = pd.read_csv('agents.csv', header=0, delimiter=",", engine='python')
     j = 0
     my_dir = os.getcwd()
     for z in lc:
         number = 1
         name = 'coil_00' + str(number)
+        df = pd.read_csv('agents.csv', header=0, delimiter=",", engine='python')
         for i in range(11):
             if df.loc[df.Name == name, 'Code'].isnull().any().any():
                 cmd = f'python3 coil.py -an {str(number)} -l {va[j]} -c{z} -w{wait_time}'
@@ -806,7 +807,7 @@ def loc_of_coil(coil_df):
 '''Functions to improve readability in messages. Improve functions'''
 
 def request_browser(df, seq, list):
-    df = df.loc[:, 'id':'request_type']
+    df.loc[:, 'id':'request_type']
     df.loc[0, 'to'] = 'browser@apiict00.etsii.upm.es'
     df.loc[0, 'msg'] = seq
     df.loc[0, 'coils'] = str(list)
