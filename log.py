@@ -89,20 +89,21 @@ class LogAgent(Agent):
                             if 'purpose' in browser_df.columns:
                                 if browser_df.loc[0, 'purpose'] == "location_coil":
                                     msg = asf.loc_of_coil(browser_df)
-                                    msg_to_json = msg.to_json()
-                                    msg_to_br = asf.msg_to_br(msg_to_json, my_dir)
-                                    await self.send(msg_to_br)
-                                    msg_to_log = asf.send_br_log(msg, browser_df, my_full_name)
-                                    fileh = logging.FileHandler(f'{my_dir}/{my_name}.log')
-                                    msg_sender_jid20 = 'log'
-                                    formatter = logging.Formatter(
-                                        f'%(asctime)s;%(levelname)s;{msg_sender_jid20};%(pathname)s;%(message)s')
-                                    fileh.setFormatter(formatter)
-                                    log = logging.getLogger()
-                                    for hdlr in log.handlers[:]:  # remove all old handlers
-                                        log.removeHandler(hdlr)
-                                    log.addHandler(fileh)
-                                    logger.info(msg_to_log)
+                                    if not msg.empty:
+                                        msg_to_json = msg.to_json()
+                                        msg_to_br = asf.msg_to_br(msg_to_json, my_dir)
+                                        await self.send(msg_to_br)
+                                        msg_to_log = asf.send_br_log(msg, browser_df, my_full_name)
+                                        fileh = logging.FileHandler(f'{my_dir}/{my_name}.log')
+                                        msg_sender_jid20 = 'log'
+                                        formatter = logging.Formatter(
+                                            f'%(asctime)s;%(levelname)s;{msg_sender_jid20};%(pathname)s;%(message)s')
+                                        fileh.setFormatter(formatter)
+                                        log = logging.getLogger()
+                                        for hdlr in log.handlers[:]:  # remove all old handlers
+                                            log.removeHandler(hdlr)
+                                        log.addHandler(fileh)
+                                        logger.info(msg_to_log)
                 else:
                     msg = f"Log_agent didn't receive any msg in the last {wait_msg_time}s"
                     msg = asf.inform_error(msg)
