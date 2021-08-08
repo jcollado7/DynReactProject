@@ -42,16 +42,6 @@ def auction_blank_df():
     return df
 
 
-def info_browser():
-    df = pd.DataFrame()
-    df['location'] = ['K', 'L', 'M', '', 'A', 'K', 'L', 'M', 'N', 'A']
-    df['agents'] = ['c01', 'c004@apiict03.etsii.upm.es', 'c003@apiict03.etsii.upm.es', 'br', 'c01', 'c07', 'c03', 'c04', 'c09', 'c01']
-    df['id'] = ['coil_001', 'coil_004', 'coil_003', 'browser', 'coil_001', 'coil_007', 'coil_003', 'coil_004', 'coil_009', 'coil_001']
-    df['time'] = [57, 72, 47, 69, 57, 68, 72, 47, 69, 57]
-    df['status'] = ['on', 'on', 'on', 'on', 'on', 'on', 'stand-by', 'on', 'on', 'on']
-    df['From'] = ['NWW1', 'NWW1', 'NWW4', '', 'PA_04', 'NWW1', 'NWW3', 'NWW1', 'NWW3', 'NWW4']
-    return df
-
 def browser_util(df):
     op_times_df = pd.DataFrame([], columns=['AVG(tr_op_time)', 'AVG(va_op_time)'])
     op_times_df.at[0, 'AVG(tr_op_time)'] = 72
@@ -94,7 +84,6 @@ def msg_to_br(msg_body, agent_directory):
     return msg_br
 
 def get_coil_list(browser_df, list):
-    browser_df = browser_df.loc[browser_df['agent_type'] == "coil"]
     browser_df = browser_df.reset_index(drop=True)
     coil_df_nww = pd.DataFrame()
     for i in list:
@@ -137,7 +126,7 @@ def transport_cost(to):
 def bid_evaluation(coil_msgs_df, va_data_df):
     key = []
     transport_cost_df = transport_cost(va_data_df.loc[0,'id'])
-    for i in range(transport_cost_df.shape[0]): #.shape[0], devuelve las n filas
+    for i in range(transport_cost_df.shape[0]):
         m = transport_cost_df.loc[i, 'CrossTransport']
         n = transport_cost_df.loc[i, 'Supply']
         key.append(n+m)
@@ -266,19 +255,19 @@ def change_agent(my_full_name, my_dir):
     df.loc[df.Name == my_full_name, 'Code'] = ''
     df.to_csv(f'{my_dir}''/''agents.csv', index=False, header=True)
 
-def auction_entry(va_data_df, coil_df,number,location_df):
+def auction_entry(va_data_df, coil_df,number):
     dif_ancho = coil_df.loc[0,'ancho'] - va_data_df.loc[0, 'ancho']
     dif_largo = coil_df.loc[0, 'largo'] - va_data_df.loc[0, 'largo']
     dif_espesor = coil_df.loc[0, 'espesor'] - va_data_df.loc[0, 'espesor']
     dif_total = float(dif_ancho + dif_largo + dif_espesor)
     if (dif_total <= 250) or (number >= 5):
         if (va_data_df.loc[0, 'id'] == 'va_08' or va_data_df.loc[0, 'id'] == 'va_09') and (
-                location_df.loc[0, 'location'] == 'K'):
+                coil_df.loc[0, 'location'] == 'K'):
             answer = 1
-        elif (va_data_df.loc[0, 'id'] == 'va_10' or va_data_df.loc[0, 'id'] == 'va_11') and (location_df.loc[0, 'location'] == 'L'):
+        elif (va_data_df.loc[0, 'id'] == 'va_10' or va_data_df.loc[0, 'id'] == 'va_11') and (coil_df.loc[0, 'location'] == 'L'):
             answer = 1
         elif (va_data_df.loc[0, 'id'] == 'va_12') and (
-                location_df.loc[0, 'location'] == 'M' or location_df.loc[0, 'location'] == 'N'):
+                coil_df.loc[0, 'location'] == 'M' or coil_df.loc[0, 'location'] == 'N'):
             answer = 1
         else:
             answer = 0
@@ -595,6 +584,8 @@ def check_active_users_loc_times(va_data_df, agent_name, *args):
     op_times_df.at[0, 'AVG(va_op_time)'] = va_avg'''
     # Check active users locations
     sorted_df = df.sort_values(by=['time'])
+    sorted_df = sorted_df.loc[sorted_df['agent_type'] == "coil"]
+    sorted_df = sorted_df.drop_duplicates(subset=['id'], keep="last")
     sorted_df = sorted_df.loc[sorted_df['status'] == "auction"]
     active_time = datetime.datetime.now() - datetime.timedelta(seconds=300)
     sorted_df = sorted_df.loc[sorted_df['time'] < active_time]
@@ -626,7 +617,7 @@ def check_active_users_loc_times(va_data_df, agent_name, *args):
             users_location_df.at[i, 'agent_type'] = users_location_df.loc[i, 'agent'][:-3]
     # Joins information
     #users_location_df = users_location_df.join(op_times_df)
-    users_location_df = users_location_df.loc[users_location_df['agent_type'] == "coil"]
+    #users_location_df = users_location_df.loc[users_location_df['agent_type'] == "coil"]
     users_location_df = users_location_df.reset_index(drop=True)
     coil_df = pd.DataFrame()
     z = va_data_df.loc[0, 'wh_available']
@@ -802,6 +793,34 @@ def loc_of_coil(coil_df):
     else:
         coil_df = pd.DataFrame()
         return coil_df
+
+def change_jid(my_dir, my_full_name):
+    df = agents_data()
+    df.loc[df.Name == my_full_name, 'Code'] = ''
+    df.to_csv(f'{my_dir}''/''agents.csv', index=False, header=True)
+
+def order_budget(budget, code):
+    df = pd.DataFrame()
+    df_agents = pd.read_csv(f'agents.csv', header=0, delimiter=",", engine='python')
+    name = df_agents.loc[df_agents.Code == code, 'User name'].values
+    name = name[0]
+    df.loc[0, 'id'] = 'launcher'
+    df.loc[0, 'purpose'] = 'setup'
+    df.loc[0, 'msg'] = 'new budget'
+    df.loc[0, 'budget'] = budget
+    df.loc[0, 'code'] = str(code)
+    df.loc[0, 'to'] = str(name)
+    return df
+
+def order_coil(la_json, code):
+    df = pd.read_csv(f'agents.csv', header=0, delimiter=",", engine='python')
+    name = df.loc[df.Code == code, 'User name'].values
+    name = name[0]
+    msg_budget = Message()
+    msg_budget.to = str(name)
+    msg_budget.body = la_json
+    return msg_budget
+
 
 
 
