@@ -18,6 +18,7 @@ class CoilAgent(Agent):
             global my_full_name, my_dir, wait_msg_time, coil_status_var, coil_started_at, stop_time, refresh_time, coil_agent, coil_df, bid_register_df, number_auction, auction_finish_at, ip_machine, seq_coil
             if coil_status_var == "auction":
                 """inform log of status"""
+                print(coil_df)
                 to_do = "search_auction"
                 coil_inform_json = asf.inform_log_df(my_full_name, coil_started_at, coil_status_var, coil_df, to_do).to_json(orient="records")
                 coil_msg_log = asf.msg_to_log(coil_inform_json, my_dir)
@@ -25,16 +26,19 @@ class CoilAgent(Agent):
                 # it will wait here for va's that are auctionable.
                 va_coil_msg = await self.receive(timeout=auction_time)
                 if va_coil_msg:
-                    seq_coil = seq_coil + 1
                     msg_sender_jid = str(va_coil_msg.sender)
                     msg_sender_jid = msg_sender_jid[:-33]
-                    if msg_sender_jid == "va":
+                    if msg_sender_jid == "launch":
+                        la_coil_msg_df = pd.read_json(va_coil_msg.body)
+                        coil_df.loc[0, 'budget'] = la_coil_msg_df.loc[0, 'budget']
+                    elif msg_sender_jid == "va":
+                        seq_coil = seq_coil + 1
                         """Inform log """
                         va_coil_msg_sender = va_coil_msg.sender
                         coil_msg_log_sender = str(va_coil_msg.sender)
                         va_coil_msg_df = pd.read_json(va_coil_msg.body)
                         '''Evaluate whether to enter the auction, asking Browser the location'''
-                        coil_request_type = "my location"
+                        '''coil_request_type = "my location"
                         coil_msg_br_body = asf.req_active_users_loc_times_coil(coil_df, seq_coil, coil_request_type).to_json()  # returns a json with request info to browser
                         coil_msg_br = asf.msg_to_br(coil_msg_br_body, my_dir)
                         # returns a msg object with request info to browser and message setup
@@ -53,105 +57,91 @@ class CoilAgent(Agent):
                                 msg_sender_jid_0 = msg_sender_jid[:-9]
                                 msg_sender_jid = msg_sender_jid[:-31]
                                 if msg_sender_jid == "browser":
-                                    br_coil_msg_df = pd.read_json(br_coil_msg_json.body)
-                                    coil_enter = asf.auction_entry(va_coil_msg_df,coil_df,number_auction,br_coil_msg_df)
-                                    loc = br_coil_msg_df.loc[0, 'location']
-                                    if coil_enter == 1:
-                                        '''Create bid'''
-                                        bid_mean = va_coil_msg_df.loc[0, 'bid_mean']
-                                        bid = asf.create_bid(coil_df, bid_mean)
-                                        coil_df['bid'] = bid
-                                        coil_df['budget_remaining'] = coil_df.loc[0,'budget'] - coil_df.loc[0,'bid']
-                                        coil_va_msg = asf.msg_to_sender(va_coil_msg)
-                                        coil_va_msg.body = coil_df.to_json()
-                                        await self.send(coil_va_msg)
-                                        """Inform log"""
-                                        coil_msg_log_body = asf.send_to_va_msg(my_full_name, bid, coil_msg_log_sender[:-9], '1')
-                                        coil_msg_log_body = coil_msg_log_body.to_json(orient="records")
-                                        coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
-                                        await self.send(coil_msg_log)
-                                        """Receive request to counterbid"""
-                                        i = 0
-                                        while i < 3:
-                                            i = i + 1
-                                            va_coil_msg2 = await self.receive(timeout=30)
-                                            if va_coil_msg2:
-                                                va_coil_msg_df = pd.read_json(va_coil_msg2.body)
-                                                if va_coil_msg2.sender == va_coil_msg_sender:  # checks if communication comes from last sender
-                                                    a = va_coil_msg_df.at[0, 'bid_status']
-                                                    if va_coil_msg_df.at[0, 'bid_status'] == 'extrabid':
-                                                        """Create extra Bid"""
-                                                        counterbid = asf.create_counterbid(va_coil_msg_df,coil_df)
-                                                        """Send bid to va"""
-                                                        coil_va_msg = asf.msg_to_sender(va_coil_msg2)
-                                                        coil_df.loc[0, 'counterbid'] = counterbid
-                                                        coil_df['User_name_va'] = str(va_coil_msg2.sender)
-                                                        coil_df['budget_remaining'] = coil_df.loc[0, 'budget'] - coil_df.loc[0, 'counterbid']
-                                                        coil_va_msg.body = coil_df.to_json()
-                                                        await self.send(coil_va_msg)
-                                                        """Inform log """
-                                                        coil_msg_log_body = asf.send_to_va_msg(my_full_name, counterbid,
-                                                                                               coil_msg_log_sender[:-9], '2')
-                                                        coil_msg_log_body = coil_msg_log_body.to_json(orient="records")
-                                                        coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
-                                                        await self.send(coil_msg_log)
-                                                        """Wait to receive acceptance"""
-                                                        va_coil_msg3 = await self.receive(timeout=wait_msg_time)
-                                                        if va_coil_msg3:
-                                                            va_coil_msg_df = pd.read_json(va_coil_msg3.body)
-                                                            if va_coil_msg3.sender == va_coil_msg_sender:  # checks if communication comes from last sender
-                                                                if va_coil_msg_df.at[0, 'bid_status'] == 'acceptedbid':
-                                                                    """Store accepted Bid from ca agent"""
-                                                                    bid_register_df = bid_register_df.append(va_coil_msg_df)
-                                                                    """Confirm or deny assignation"""
-                                                                    accepted_jid = asf.compare_va(va_coil_msg_df, bid_register_df)
-                                                                    accepted_jid = accepted_jid[:-9]
-                                                                    va_coil_msg_sender_f = str(va_coil_msg_sender)[:-9]
-                                                                    accepted_jid = str(accepted_jid)
-                                                                    if accepted_jid == va_coil_msg_sender_f:
-                                                                        coil_va_msg = asf.msg_to_sender(va_coil_msg)
-                                                                        coil_df.loc[0, 'bid_status'] = 'acceptedbid'
-                                                                        coil_va_msg.body = coil_df.to_json()
-                                                                        await self.send(coil_va_msg)
-                                                                        """inform log of auction won"""
-                                                                        auction_finish_at = datetime.datetime.now()
-                                                                        coil_msg_log_body = asf.won_auction(my_full_name, va_coil_msg_sender_f, auction_finish_at)
-                                                                        coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
-                                                                        await self.send(coil_msg_log)
-                                                                        coil_status_var = 'sleep'
-                                                                        coil_msg_log_body = asf.coil_status(my_full_name)
-                                                                        coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
-                                                                        await self.send(coil_msg_log)
-                                                                        break
-                                                                    else:
-                                                                        """inform log of issue"""
-                                                                        va_id = va_coil_msg_df.loc[0, 'id']
-                                                                        coil_msg_log_body = f'{my_full_name} did not accept to process in {va_id} in final acceptance'
-                                                                        coil_msg_log_body = asf.inform_error(coil_msg_log_body)
-                                                                        coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
-                                                                        await self.send(coil_msg_log)
-                                                                else:
-                                                                    """inform log of issue"""
-                                                                    va_id = va_coil_msg_df.loc[0, 'id']
-                                                                    coil_msg_log_body = f'{va_id} did not accept to process in {my_full_name} in final acceptance'
-                                                                    coil_msg_log_body = asf.inform_error(coil_msg_log_body)
-                                                                    coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
-                                                                    await self.send(coil_msg_log)
-                                                            else:
-                                                                """inform log of issue"""
-                                                                coil_msg_log_body = f'incorrect sender'
-                                                                coil_msg_log_body = asf.inform_error(coil_msg_log_body)
-                                                                coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
-                                                                await self.send(coil_msg_log)
+                                    br_coil_msg_df = pd.read_json(br_coil_msg_json.body)'''
+                        coil_enter = asf.auction_entry(va_coil_msg_df,coil_df,number_auction)
+                        #loc = br_coil_msg_df.loc[0, 'location']
+                        if coil_enter == 1:
+                            '''Create bid'''
+                            bid_mean = va_coil_msg_df.loc[0, 'bid_mean']
+                            bid = asf.create_bid(coil_df, bid_mean)
+                            coil_df['bid'] = bid
+                            coil_df['budget_remaining'] = coil_df.loc[0,'budget'] - coil_df.loc[0,'bid']
+                            coil_va_msg = asf.msg_to_sender(va_coil_msg)
+                            coil_va_msg.body = coil_df.to_json()
+                            await self.send(coil_va_msg)
+                            """Inform log"""
+                            coil_msg_log_body = asf.send_to_va_msg(my_full_name, bid, coil_msg_log_sender[:-9], '1')
+                            coil_msg_log_body = coil_msg_log_body.to_json(orient="records")
+                            coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
+                            await self.send(coil_msg_log)
+                            """Receive request to counterbid"""
+                            i = 0
+                            while i < 3:
+                                i = i + 1
+                                va_coil_msg2 = await self.receive(timeout=wait_msg_time)
+                                if va_coil_msg2:
+                                    va_coil_msg_df = pd.read_json(va_coil_msg2.body)
+                                    if va_coil_msg2.sender == va_coil_msg_sender:  # checks if communication comes from last sender
+                                        a = va_coil_msg_df.at[0, 'bid_status']
+                                        if va_coil_msg_df.at[0, 'bid_status'] == 'extrabid':
+                                            """Create extra Bid"""
+                                            counterbid = asf.create_counterbid(va_coil_msg_df,coil_df)
+                                            """Send bid to va"""
+                                            coil_va_msg = asf.msg_to_sender(va_coil_msg2)
+                                            coil_df.loc[0, 'counterbid'] = counterbid
+                                            coil_df['User_name_va'] = str(va_coil_msg2.sender)
+                                            coil_df['budget_remaining'] = coil_df.loc[0, 'budget'] - coil_df.loc[0, 'counterbid']
+                                            coil_va_msg.body = coil_df.to_json()
+                                            await self.send(coil_va_msg)
+                                            """Inform log """
+                                            coil_msg_log_body = asf.send_to_va_msg(my_full_name, counterbid,
+                                                                                   coil_msg_log_sender[:-9], '2')
+                                            coil_msg_log_body = coil_msg_log_body.to_json(orient="records")
+                                            coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
+                                            await self.send(coil_msg_log)
+                                            """Wait to receive acceptance"""
+                                            va_coil_msg3 = await self.receive(timeout=wait_msg_time)
+                                            if va_coil_msg3:
+                                                va_coil_msg_df = pd.read_json(va_coil_msg3.body)
+                                                if va_coil_msg3.sender == va_coil_msg_sender:  # checks if communication comes from last sender
+                                                    if va_coil_msg_df.at[0, 'bid_status'] == 'acceptedbid':
+                                                        """Store accepted Bid from ca agent"""
+                                                        bid_register_df = bid_register_df.append(va_coil_msg_df)
+                                                        """Confirm or deny assignation"""
+                                                        accepted_jid = asf.compare_va(va_coil_msg_df, bid_register_df)
+                                                        accepted_jid = accepted_jid[:-9]
+                                                        va_coil_msg_sender_f = str(va_coil_msg_sender)[:-9]
+                                                        accepted_jid = str(accepted_jid)
+                                                        if accepted_jid == va_coil_msg_sender_f:
+                                                            coil_va_msg = asf.msg_to_sender(va_coil_msg)
+                                                            coil_df.loc[0, 'bid_status'] = 'acceptedbid'
+                                                            coil_va_msg.body = coil_df.to_json()
+                                                            await self.send(coil_va_msg)
+                                                            """inform log of auction won"""
+                                                            auction_finish_at = datetime.datetime.now()
+                                                            coil_msg_log_body = asf.won_auction(my_full_name, va_coil_msg_sender_f, auction_finish_at)
+                                                            coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
+                                                            await self.send(coil_msg_log)
+                                                            coil_status_var = 'sleep'
+                                                            '''coil_msg_log_body = asf.coil_status(my_full_name)
+                                                            coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
+                                                            await self.send(coil_msg_log)'''
+                                                            coil_inform_json = asf.inform_log_df(my_full_name,coil_started_at,
+                                                                                                 coil_status_var,coil_df).to_json(orient="records")
+                                                            coil_msg_log = asf.msg_to_log(coil_inform_json, my_dir)
+                                                            await self.send(coil_msg_log)
+                                                            break
                                                         else:
-                                                            """inform log"""
-                                                            coil_msg_log_body = f'{my_full_name} did not receive any msg in the last {wait_msg_time}s at {coil_status_var} at last auction level'
+                                                            """inform log of issue"""
+                                                            va_id = va_coil_msg_df.loc[0, 'id']
+                                                            coil_msg_log_body = f'{my_full_name} did not accept to process in {va_id} in final acceptance'
                                                             coil_msg_log_body = asf.inform_error(coil_msg_log_body)
                                                             coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                                             await self.send(coil_msg_log)
                                                     else:
-                                                        """inform log"""
-                                                        coil_msg_log_body = f'{my_full_name} did not receive valuation for the offer in the last {wait_msg_time}s at {coil_status_var} at last auction level'
+                                                        """inform log of issue"""
+                                                        va_id = va_coil_msg_df.loc[0, 'id']
+                                                        coil_msg_log_body = f'{va_id} did not accept to process in {my_full_name} in final acceptance'
                                                         coil_msg_log_body = asf.inform_error(coil_msg_log_body)
                                                         coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                                         await self.send(coil_msg_log)
@@ -167,30 +157,36 @@ class CoilAgent(Agent):
                                                 coil_msg_log_body = asf.inform_error(coil_msg_log_body)
                                                 coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                                 await self.send(coil_msg_log)
+                                        else:
+                                            """inform log"""
+                                            coil_msg_log_body = f'{my_full_name} did not receive evaluation for the offer in the last {wait_msg_time}s at {coil_status_var} at last auction level'
+                                            coil_msg_log_body = asf.inform_error(coil_msg_log_body)
+                                            coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
+                                            await self.send(coil_msg_log)
                                     else:
-                                        """inform log of status"""
-                                        to_do = "search_auction"
-                                        va_id = va_coil_msg_df.loc[0, 'id']
-                                        number_auction += int(1)
-                                        number_auction_str = f'{my_full_name} did not enter {va_id} auction because configuration measures was too high. Not_entered auction number: {number_auction}'
-                                        coil_msg_log_body = asf.inform_error(number_auction_str)
+                                        """inform log of issue"""
+                                        coil_msg_log_body = f'incorrect sender'
+                                        coil_msg_log_body = asf.inform_error(coil_msg_log_body)
                                         coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                         await self.send(coil_msg_log)
                                 else:
                                     """inform log"""
-                                    coil_msg_log_body = f'{my_full_name} did not receive any msg from Browser Agent in the last {wait_msg_time}s at {coil_status_var}'
+                                    coil_msg_log_body = f'{my_full_name} did not receive any msg in the last {wait_msg_time}s at {coil_status_var} at last auction level'
                                     coil_msg_log_body = asf.inform_error(coil_msg_log_body)
                                     coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                                     await self.send(coil_msg_log)
-                            else:
-                                """inform log"""
-                                coil_msg_log_body = f'{my_full_name} did not receive any msg in the last {wait_msg_time}s at {coil_status_var}'
-                                coil_msg_log_body = asf.inform_error(coil_msg_log_body)
-                                coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
-                                await self.send(coil_msg_log)
+                        else:
+                            """inform log of status"""
+                            to_do = "search_auction"
+                            va_id = va_coil_msg_df.loc[0, 'id']
+                            number_auction += int(1)
+                            number_auction_str = f'{my_full_name} did not enter {va_id} auction because does not meet the requirements. Not_entered auction number: {number_auction}'
+                            coil_msg_log_body = asf.inform_error(number_auction_str)
+                            coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
+                            await self.send(coil_msg_log)
                     else:
                         """inform log"""
-                        coil_msg_log_body = f'{my_full_name} did not receive any msg from VA Agent in the last {wait_msg_time}s at {coil_status_var}'
+                        coil_msg_log_body = f'{my_full_name} did not receive any msg from VA Agent or Launcher Agent in the last {wait_msg_time}s at {coil_status_var}'
                         coil_msg_log_body = asf.inform_error(coil_msg_log_body)
                         coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
                         await self.send(coil_msg_log)
@@ -225,7 +221,7 @@ class CoilAgent(Agent):
                         await self.send(coil_msg_log)
                 else:
                     """inform log"""
-                    time.sleep(20)
+                    time.sleep(10)
                     coil_msg_log_body = f'{my_full_name} did not receive any msg in the last {wait_msg_time}s at {coil_status_var}'
                     coil_msg_log_body = asf.inform_error(coil_msg_log_body)
                     coil_msg_log = asf.msg_to_log(coil_msg_log_body, my_dir)
@@ -233,9 +229,9 @@ class CoilAgent(Agent):
                     now_time = datetime.datetime.now()
                     tiempo = now_time - auction_finish_at
                     segundos = tiempo.seconds
-                    if segundos > 1500:
-                        asf.change_agent(my_full_name, my_dir)
-                        sys.exit()
+                    if segundos > 50:
+                        asf.change_jid(my_dir, my_full_name)
+                        self.kill()
             elif coil_status_var == "stand-by":
                 """inform log of status"""
                 coil_inform_json = asf.inform_log_df(my_full_name, coil_started_at, coil_status_var, coil_df).to_json(orient="records")
@@ -256,6 +252,7 @@ class CoilAgent(Agent):
             coil_msg_end = asf.send_activation_finish(my_full_name, ip_machine, 'end')
             va_msg_log = asf.msg_to_log(coil_msg_end, my_dir)
             await self.send(va_msg_log)
+            await self.agent.stop()
 
         async def on_start(self):
             """inform log of start"""
@@ -316,11 +313,10 @@ if __name__ == "__main__":
     future.result()
     """Counter"""
     stop_time = datetime.datetime.now() + datetime.timedelta(seconds=args.stop_time)
-    while datetime.datetime.now() < stop_time:
+    while datetime.datetime.now() < stop_time and coil_agent.is_alive():
         time.sleep(1)
     else:
         coil_status_var = "off"
         coil_agent.stop()
-        quit_spade()
-        
+    quit_spade()
 
