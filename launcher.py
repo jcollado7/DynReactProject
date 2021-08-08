@@ -15,7 +15,7 @@ import socket
 class LaunchAgent(Agent):
     class LABehav(OneShotBehaviour):
         async def run(self):
-            global la_status_var, my_full_name, la_started_at, stop_time, my_dir, wait_msg_time, list_ware, string_operations, ip_machine
+            global la_status_var, my_full_name, la_started_at, stop_time, my_dir, wait_msg_time, list_ware, string_operations, ip_machine, change_budget, name_coil
             """Inform log """
             la_msg_start = asf.send_activation_finish(my_full_name, ip_machine, 'start')
             la_msg_log = asf.msg_to_log(la_msg_start, my_dir)
@@ -26,7 +26,12 @@ class LaunchAgent(Agent):
                                                     num_coils, list_coils, each_coil_price, list_ware, string_operations, wait_msg_time).to_json(orient="records")
                 la_order_log = asf.order_to_log(la_inform_log_json, my_dir)
                 await self.send(la_order_log)
-
+            if name_coil != "No":
+                la_coil_json = asf.order_budget(change_budget, name_coil).to_json(orient="records")
+                msg_budget = asf.order_coil(la_coil_json, name_coil)
+                await self.send(msg_budget)
+                la_order_log = asf.order_to_log(la_coil_json, my_dir)
+                await self.send(la_order_log)
             """Send searching code to browser"""
             if la_search != "No":
                 la_search_browser = asf.order_to_search(la_search, my_full_name, my_dir)
@@ -70,7 +75,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='wh parser')
     parser.add_argument('-an', '--agent_number', type=int, metavar='', required=False, default=1,
                         help='agent_number: 1,2,3,4..')
-    parser.add_argument('-w', '--wait_msg_time', type=int, metavar='', required=False, default=20,
+    parser.add_argument('-w', '--wait_msg_time', type=int, metavar='', required=False, default=800,
                         help='wait_msg_time: time in seconds to wait for a msg')
     parser.add_argument('-st', '--stop_time', type=int, metavar='', required=False, default=10,
                         help='stop_time: time in seconds where agent')
@@ -80,6 +85,10 @@ if __name__ == "__main__":
                         help='Search order by code. Writte depending on your case: oc (order_code),sg(steel_grade),at(average_thickness), wi(width_coils), ic(id_coil), so(string_operations), date.Example: --search oc = 987')
     parser.add_argument('-oc', '--order_code', type=str, metavar='', required=False, default='No',
                         help='Specify the number code of the order. Write between "x"')
+    parser.add_argument('-cb', '--change_budget', type=str, metavar='', required=False, default='210',
+                        help='Specify the new budget. Write between "x"')
+    parser.add_argument('-na', '--name_new_budget', type=str, metavar='', required=False, default='No',
+                        help='Specify the coil of new budget. "cO202106101"')
     parser.add_argument('-sg', '--steel_grade', type=str, metavar='', required=False, default='1',
                         help='Number which specifies the type of steel used for coils in an order.Write between "x"')
     parser.add_argument('-at', '--average_thickness', type=float, metavar='', required=False, default='0.4',
@@ -112,6 +121,8 @@ if __name__ == "__main__":
     each_coil_price = round((args.price_order / args.number_coils), 2)
     list_coils = args.list_coils
     list_ware = args.list_position
+    change_budget = args.change_budget
+    name_coil = args.name_new_budget
     string_operations = args.string_operations
     """Save to csv who I am"""
     la_data_df = asf.set_agent_parameters(my_dir, my_name, my_full_name)
