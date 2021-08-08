@@ -77,11 +77,6 @@ class LogAgent(Agent):
                         launcher_df = pd.read_json(msg.body)
                         if 'order_code' in launcher_df:
                             asf.change_warehouse(launcher_df, my_dir)
-                            '''coils = launcher_df.loc[0,'list_coils']
-                            locations = launcher_df.loc[0, 'list_ware']
-                            code = launcher_df.loc[0, 'order_code']
-                            order = asf.order_register(my_full_name, code, coils, locations)
-                            logger.info(order)'''
                     elif msg_sender_jid == "browser":
                         x = re.search("{", msg.body)
                         if x:
@@ -165,7 +160,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Log parser')
     parser.add_argument('-an', '--agent_number', type=int, metavar='', required=False, default=1, help='agent_number: 1,2,3,4..')
     parser.add_argument('-v', '--verbose', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], metavar='', required=False, default='DEBUG', help='verbose: amount of information saved')
-    parser.add_argument('-w', '--wait_msg_time', type=int, metavar='', required=False, default=120, help='wait_msg_time: time in seconds to wait for a msg. Purpose of system monitoring')
+    parser.add_argument('-w', '--wait_msg_time', type=int, metavar='', required=False, default=800, help='wait_msg_time: time in seconds to wait for a msg. Purpose of system monitoring')
     parser.add_argument('-st', '--stop_time', type=int, metavar='', required=False, default=84600, help='stop_time: time in seconds where agent isnt asleep')
     parser.add_argument('-do', '--delete_order', type=str, metavar='', required=False, default='No', help='Order to delete') #29/04
     args = parser.parse_args()
