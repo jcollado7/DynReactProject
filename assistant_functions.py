@@ -278,16 +278,23 @@ def auction_entry(va_data_df, coil_df,number):
 def create_bid(coil_df, bid_mean):
 
     if coil_df.loc[0, 'number_auction'] <= 3:
-        valor_1 = 0.15 * coil_df.loc[0, 'budget']
+        valor_1 = 0.16 * coil_df.loc[0, 'budget']
     elif coil_df.loc[0, 'number_auction'] > 3 and coil_df.loc[0, 'number_auction'] <= 7:
         valor_1 = 0.23 * coil_df.loc[0, 'budget']
     else:
         valor_1 = 0.4 * coil_df.loc[0, 'budget']
-    if coil_df.loc[0, 'ship_date'] <= 25:
-        valor_2 = 0.15 * coil_df.loc[0, 'budget']
+        
+    if coil_df.loc[0, 'ship_date'] <= 10:
+        valor_2 = 0.23 * coil_df.loc[0, 'budget']
+    elif coil_df.loc[0, 'ship_date'] <= 16:
+        valor_2 = 0.21 * coil_df.loc[0, 'budget']
+    elif coil_df.loc[0, 'ship_date'] <= 25:
+        valor_2 = 0.18 * coil_df.loc[0, 'budget']
     else:
-        valor_2 = 0.2 * coil_df.loc[0, 'budget']
+        valor_2 = 0.16 * coil_df.loc[0, 'budget']
+        
     oferta = 0.5 * bid_mean + valor_1 + valor_2
+    
     if oferta > coil_df.loc[0, 'budget']:
         oferta = coil_df.loc[0, 'budget']
     return oferta
