@@ -18,7 +18,6 @@ class CoilAgent(Agent):
             global my_full_name, my_dir, wait_msg_time, coil_status_var, coil_started_at, stop_time, refresh_time, coil_agent, coil_df, bid_register_df, number_auction, auction_finish_at, ip_machine, seq_coil
             if coil_status_var == "auction":
                 """inform log of status"""
-                print(coil_df)
                 to_do = "search_auction"
                 coil_inform_json = asf.inform_log_df(my_full_name, coil_started_at, coil_status_var, coil_df, to_do).to_json(orient="records")
                 coil_msg_log = asf.msg_to_log(coil_inform_json, my_dir)
